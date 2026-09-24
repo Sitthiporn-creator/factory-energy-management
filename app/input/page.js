@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -9,285 +9,431 @@ const supabase = createClient(
 );
 
 export default function InputPage() {
-  const [form, setForm] = useState({
-    record_date: "",
-    electricity: "",
-    solar: "",
-    gas: "",
-    fuel: "",
-    steam: "",
-    water: "",
-    note: "",
-  });
+  const [energyTypes, setEnergyTypes] = useState([]);
+  const [periodType, setPeriodType] = useState("daily");
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [recordDate, setRecordDate] = useState("");
+  const [values, setValues] = useState({});
+  const [note, setNote] = useState("");
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  function handleChange(e) {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
+  useEffect(() => {
+    loadEnergyTypes();
+  }, []);
+
+  async function loadEnergyTypes() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("energy_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("id");
+
+    if (error) {
+      setMessage("❌ โหลดหัวข้อไม่สำเร็จ: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    setEnergyTypes(data || []);
+
+    const initialValues = {};
+
+    (data || []).forEach((item) => {
+      initialValues[item.id] = "";
     });
+
+    setValues(initialValues);
+    setLoading(false);
+  }
+
+  function changeValue(id, value) {
+    setValues((current) => ({
+      ...current,
+      [id]: value,
+    }));
+  }
+
+  function getRecordDate() {
+    if (periodType === "daily") {
+      return recordDate;
+    }
+
+    if (periodType === "monthly") {
+      if (!periodLabel) return "";
+
+      return `${periodLabel}-01`;
+    }
+
+    if (periodType === "yearly") {
+      if (!periodLabel) return "";
+
+      return `${periodLabel}-01-01`;
+    }
+
+    return "";
   }
 
   async function saveData(e) {
     e.preventDefault();
 
-    setMessage("กำลังบันทึก...");
-
-    const { error } = await supabase
-      .from("energy_data")
-      .insert([
-        {
-          record_date: form.record_date,
-          electricity:
-            Number(form.electricity) || 0,
-          solar:
-            Number(form.solar) || 0,
-          gas:
-            Number(form.gas) || 0,
-          fuel:
-            Number(form.fuel) || 0,
-          steam:
-            Number(form.steam) || 0,
-          water:
-            Number(form.water) || 0,
-          note: form.note,
-        },
-      ]);
-
-    if (error) {
-      setMessage(
-        "❌ บันทึกไม่สำเร็จ: " +
-          error.message
-      );
+    if (periodType === "daily" && !recordDate) {
+      setMessage("⚠️ กรุณาเลือกวันที่");
       return;
     }
 
-    setMessage(
-      "✅ บันทึกข้อมูลสำเร็จ"
-    );
+    if (
+      (periodType === "monthly" || periodType === "yearly") &&
+      !periodLabel
+    ) {
+      setMessage("⚠️ กรุณาเลือกช่วงเวลา");
+      return;
+    }
 
-    setForm({
-      record_date: "",
-      electricity: "",
-      solar: "",
-      gas: "",
-      fuel: "",
-      steam: "",
-      water: "",
-      note: "",
+    setSaving(true);
+    setMessage("กำลังบันทึก...");
+
+    const finalRecordDate = getRecordDate();
+
+    // 1. สร้างรายการหลัก
+    const { data: energyData, error: energyError } = await supabase
+      .from("energy_data")
+      .insert([
+        {
+          record_date: finalRecordDate,
+          period_type: periodType,
+          period_label: periodLabel || null,
+          note: note,
+        },
+      ])
+      .select()
+      .single();
+
+    if (energyError) {
+      setMessage(
+        "❌ บันทึกข้อมูลหลักไม่สำเร็จ: " +
+          energyError.message
+      );
+      setSaving(false);
+      return;
+    }
+
+    // 2. เตรียมค่าพลังงาน
+    const energyValues = energyTypes.map((item) => ({
+      energy_data_id: energyData.id,
+      energy_type_id: item.id,
+      value: Number(values[item.id]) || 0,
+    }));
+
+    // 3. บันทึกค่าพลังงาน
+    const { error: valuesError } = await supabase
+      .from("energy_values")
+      .insert(energyValues);
+
+    if (valuesError) {
+      setMessage(
+        "⚠️ สร้างรายการแล้ว แต่บันทึกค่าพลังงานไม่สำเร็จ: " +
+          valuesError.message
+      );
+      setSaving(false);
+      return;
+    }
+
+    setMessage("✅ บันทึกข้อมูลสำเร็จ");
+
+    // ล้างข้อมูล
+    setRecordDate("");
+    setPeriodLabel("");
+    setNote("");
+
+    const emptyValues = {};
+
+    energyTypes.forEach((item) => {
+      emptyValues[item.id] = "";
     });
+
+    setValues(emptyValues);
+
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <main style={pageStyle}>
+        <div style={cardStyle}>
+          <h1>📝 บันทึกข้อมูลพลังงาน</h1>
+          <p>กำลังโหลดหัวข้อพลังงาน...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f4f7fb",
-        padding: "30px",
-        fontFamily:
-          "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "900px",
-          margin: "auto",
-        }}
-      >
-        <div
-          style={{
-            background: "white",
-            padding: "30px",
-            borderRadius: "16px",
-            boxShadow:
-              "0 2px 10px rgba(0,0,0,0.06)",
-          }}
-        >
-          <h1>
-            📝 บันทึกข้อมูลพลังงาน
-          </h1>
+    <main style={pageStyle}>
+      <div style={{ maxWidth: "1000px", margin: "auto" }}>
+        <div style={cardStyle}>
 
-          <p style={{ color: "#666" }}>
-            กรอกข้อมูลการใช้พลังงานของโรงงาน
-          </p>
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+            }}
+          >
+            <div>
+              <h1 style={{ margin: 0 }}>
+                📝 บันทึกข้อมูลพลังงาน
+              </h1>
 
-          <form onSubmit={saveData}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "20px",
-                marginTop: "25px",
-              }}
-            >
-              <Input
-                label="วันที่"
-                name="record_date"
-                type="date"
-                value={form.record_date}
-                onChange={handleChange}
-                required
-              />
-
-              <Input
-                label="⚡ ไฟฟ้า (kWh)"
-                name="electricity"
-                type="number"
-                value={form.electricity}
-                onChange={handleChange}
-                placeholder="เช่น 12500"
-              />
-
-              <Input
-                label="☀️ Solar (kWh)"
-                name="solar"
-                type="number"
-                value={form.solar}
-                onChange={handleChange}
-                placeholder="เช่น 3500"
-              />
-
-              <Input
-                label="🔥 Gas"
-                name="gas"
-                type="number"
-                value={form.gas}
-                onChange={handleChange}
-                placeholder="เช่น 500"
-              />
-
-              <Input
-                label="🛢️ น้ำมัน"
-                name="fuel"
-                type="number"
-                value={form.fuel}
-                onChange={handleChange}
-                placeholder="เช่น 200"
-              />
-
-              <Input
-                label="💨 Steam"
-                name="steam"
-                type="number"
-                value={form.steam}
-                onChange={handleChange}
-                placeholder="เช่น 1000"
-              />
-
-              <Input
-                label="💧 น้ำ"
-                name="water"
-                type="number"
-                value={form.water}
-                onChange={handleChange}
-                placeholder="เช่น 800"
-              />
+              <p style={{ color: "#666" }}>
+                กรอกข้อมูลการใช้พลังงานของโรงงาน
+              </p>
             </div>
 
+            <a
+              href="/"
+              style={{
+                textDecoration: "none",
+                background: "#64748b",
+                color: "white",
+                padding: "10px 18px",
+                borderRadius: "8px",
+              }}
+            >
+              ← Dashboard
+            </a>
+          </div>
+
+          <form onSubmit={saveData}>
+
+            {/* ประเภทช่วงเวลา */}
+            <div style={{ marginTop: "30px" }}>
+              <label style={labelStyle}>
+                ประเภทข้อมูล
+              </label>
+
+              <select
+                value={periodType}
+                onChange={(e) => {
+                  setPeriodType(e.target.value);
+                  setRecordDate("");
+                  setPeriodLabel("");
+                }}
+                style={inputStyle}
+              >
+                <option value="daily">
+                  รายวัน
+                </option>
+
+                <option value="monthly">
+                  รายเดือน
+                </option>
+
+                <option value="yearly">
+                  รายปี
+                </option>
+              </select>
+            </div>
+
+            {/* ช่วงเวลา */}
             <div style={{ marginTop: "20px" }}>
-              <label
+
+              {periodType === "daily" && (
+                <>
+                  <label style={labelStyle}>
+                    วันที่
+                  </label>
+
+                  <input
+                    type="date"
+                    value={recordDate}
+                    onChange={(e) =>
+                      setRecordDate(e.target.value)
+                    }
+                    style={inputStyle}
+                    required
+                  />
+                </>
+              )}
+
+              {periodType === "monthly" && (
+                <>
+                  <label style={labelStyle}>
+                    เดือน
+                  </label>
+
+                  <input
+                    type="month"
+                    value={periodLabel}
+                    onChange={(e) =>
+                      setPeriodLabel(e.target.value)
+                    }
+                    style={inputStyle}
+                    required
+                  />
+                </>
+              )}
+
+              {periodType === "yearly" && (
+                <>
+                  <label style={labelStyle}>
+                    ปี
+                  </label>
+
+                  <input
+                    type="number"
+                    min="2000"
+                    max="2100"
+                    value={periodLabel}
+                    onChange={(e) =>
+                      setPeriodLabel(e.target.value)
+                    }
+                    placeholder="เช่น 2026"
+                    style={inputStyle}
+                    required
+                  />
+                </>
+              )}
+            </div>
+
+            {/* หัวข้อพลังงาน */}
+            <div style={{ marginTop: "30px" }}>
+              <h2>
+                ⚡ ข้อมูลพลังงาน
+              </h2>
+
+              <div
                 style={{
-                  display: "block",
-                  fontWeight: "bold",
-                  marginBottom: "8px",
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(250px, 1fr))",
+                  gap: "20px",
                 }}
               >
+                {energyTypes.map((item) => (
+                  <div key={item.id}>
+                    <label style={labelStyle}>
+                      {item.energy_name} ({item.unit})
+                    </label>
+
+                    <input
+                      type="number"
+                      step="any"
+                      value={values[item.id] || ""}
+                      onChange={(e) =>
+                        changeValue(
+                          item.id,
+                          e.target.value
+                        )
+                      }
+                      placeholder="กรอกจำนวน"
+                      style={inputStyle}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* หมายเหตุ */}
+            <div style={{ marginTop: "30px" }}>
+              <label style={labelStyle}>
                 หมายเหตุ
               </label>
 
               <textarea
-                name="note"
-                value={form.note}
-                onChange={handleChange}
-                placeholder="รายละเอียดเพิ่มเติม"
+                value={note}
+                onChange={(e) =>
+                  setNote(e.target.value)
+                }
                 rows="4"
+                placeholder="รายละเอียดเพิ่มเติม"
                 style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border:
-                    "1px solid #ccc",
-                  fontSize: "15px",
-                  boxSizing: "border-box",
+                  ...inputStyle,
+                  resize: "vertical",
                 }}
               />
             </div>
 
+            {/* ปุ่ม */}
             <button
               type="submit"
+              disabled={saving}
               style={{
-                marginTop: "25px",
-                padding:
-                  "12px 30px",
+                marginTop: "30px",
+                padding: "13px 30px",
                 border: "none",
                 borderRadius: "8px",
-                background:
-                  "#2563eb",
+                background: saving
+                  ? "#94a3b8"
+                  : "#2563eb",
                 color: "white",
                 fontSize: "16px",
-                cursor: "pointer",
+                fontWeight: "bold",
+                cursor: saving
+                  ? "not-allowed"
+                  : "pointer",
               }}
             >
-              💾 บันทึกข้อมูล
+              {saving
+                ? "กำลังบันทึก..."
+                : "💾 บันทึกข้อมูล"}
             </button>
 
-            {message && (
-              <p
-                style={{
-                  marginTop: "20px",
-                  fontWeight: "bold",
-                }}
-              >
-                {message}
-              </p>
-            )}
           </form>
+
+          {/* Message */}
+          {message && (
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "12px",
+                borderRadius: "8px",
+                background: "#f1f5f9",
+                fontWeight: "bold",
+              }}
+            >
+              {message}
+            </div>
+          )}
+
         </div>
       </div>
     </main>
   );
 }
 
-function Input({
-  label,
-  name,
-  type,
-  value,
-  onChange,
-  placeholder,
-  required,
-}) {
-  return (
-    <div>
-      <label
-        style={{
-          display: "block",
-          fontWeight: "bold",
-          marginBottom: "8px",
-        }}
-      >
-        {label}
-      </label>
+const pageStyle = {
+  minHeight: "100vh",
+  background: "#f4f7fb",
+  padding: "30px",
+  fontFamily: "Arial, sans-serif",
+};
 
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        style={{
-          width: "100%",
-          padding: "12px",
-          borderRadius: "8px",
-          border:
-            "1px solid #ccc",
-          fontSize: "15px",
-          boxSizing: "border-box",
-        }}
-      />
-    </div>
-  );
-}
+const cardStyle = {
+  background: "white",
+  padding: "30px",
+  borderRadius: "16px",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+};
+
+const labelStyle = {
+  display: "block",
+  fontWeight: "bold",
+  marginBottom: "8px",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  fontSize: "15px",
+  boxSizing: "border-box",
+};
