@@ -21,23 +21,22 @@ const supabase = createClient(
 );
 
 /* =========================================================
-   ENERGY ICON
+   ICON
 ========================================================= */
 
 function getEnergyIcon(name = "") {
   const text = name.toLowerCase();
 
   if (
-    text.includes("ไฟฟ้า") ||
-    text.includes("electric")
+    text.includes("electric") ||
+    text.includes("ไฟฟ้า")
   ) {
     return "⚡";
   }
 
   if (
     text.includes("solar") ||
-    text.includes("แสงอาทิตย์") ||
-    text.includes("พลังงานแสงอาทิตย์")
+    text.includes("แสงอาทิตย์")
   ) {
     return "☀️";
   }
@@ -45,15 +44,15 @@ function getEnergyIcon(name = "") {
   if (
     text.includes("gas") ||
     text.includes("ก๊าซ") ||
-    text.includes("ก๊าซธรรมชาติ")
+    text.includes("แก๊ส")
   ) {
     return "🔥";
   }
 
   if (
-    text.includes("น้ำมัน") ||
     text.includes("fuel") ||
-    text.includes("oil")
+    text.includes("oil") ||
+    text.includes("น้ำมัน")
   ) {
     return "⛽";
   }
@@ -66,37 +65,25 @@ function getEnergyIcon(name = "") {
   }
 
   if (
-    text === "น้ำ" ||
-    text.includes("water")
+    text.includes("water") ||
+    text.includes("น้ำ")
   ) {
     return "💧";
   }
 
-  if (
-    text.includes("ลม") ||
-    text.includes("wind")
-  ) {
+  if (text.includes("wind")) {
     return "🌬️";
   }
 
-  if (
-    text.includes("แบต") ||
-    text.includes("battery")
-  ) {
+  if (text.includes("battery")) {
     return "🔋";
   }
 
-  if (
-    text.includes("ชีวมวล") ||
-    text.includes("biomass")
-  ) {
+  if (text.includes("biomass")) {
     return "🌱";
   }
 
-  if (
-    text.includes("ความร้อน") ||
-    text.includes("heat")
-  ) {
+  if (text.includes("heat")) {
     return "🌡️";
   }
 
@@ -104,83 +91,85 @@ function getEnergyIcon(name = "") {
 }
 
 /* =========================================================
-   NUMBER FORMAT
+   FORMAT NUMBER
 ========================================================= */
 
 function formatNumber(value) {
-  return Number(value || 0).toLocaleString(
-    "th-TH",
-    {
-      maximumFractionDigits: 2,
-    }
-  );
+  const number = Number(value) || 0;
+
+  return new Intl.NumberFormat("th-TH", {
+    maximumFractionDigits: 2,
+  }).format(number);
 }
 
 /* =========================================================
-   PERIOD NAME
+   GET PERIOD LABEL
 ========================================================= */
 
-function getPeriodName(type) {
-  if (type === "monthly") {
-    return "รายเดือน";
+function getPeriodLabel(row, viewType) {
+  if (!row) return "";
+
+  if (viewType === "daily") {
+    return row.period_label || row.record_date || "";
   }
 
-  if (type === "yearly") {
-    return "รายปี";
+  if (viewType === "monthly") {
+    return (
+      row.period_label ||
+      row.record_date?.substring(0, 7) ||
+      ""
+    );
   }
 
-  return "รายวัน";
+  if (viewType === "yearly") {
+    return (
+      row.period_label ||
+      row.record_date?.substring(0, 4) ||
+      ""
+    );
+  }
+
+  return row.period_label || row.record_date || "";
 }
 
 /* =========================================================
-   DASHBOARD
+   MAIN DASHBOARD
 ========================================================= */
 
-export default function Dashboard() {
-  const [energyTypes, setEnergyTypes] =
-    useState([]);
+export default function DashboardPage() {
+  const [energyTypes, setEnergyTypes] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [energyValues, setEnergyValues] = useState([]);
 
-  const [records, setRecords] =
-    useState([]);
+  const [selectedEnergy, setSelectedEnergy] = useState("");
+  const [viewType, setViewType] = useState("daily");
 
-  const [energyValues, setEnergyValues] =
-    useState([]);
-
-  const [selectedEnergy, setSelectedEnergy] =
-    useState("");
-
-  const [viewType, setViewType] =
-    useState("daily");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(true);
 
   /* =======================================================
      LOAD DATA
   ======================================================= */
 
   useEffect(() => {
-    loadData();
+    loadDashboardData();
   }, []);
 
-  async function loadData() {
+  async function loadDashboardData() {
     setLoading(true);
-    setError("");
 
     try {
       const [
-        typeResult,
-        dataResult,
-        valueResult,
+        energyTypesResult,
+        recordsResult,
+        energyValuesResult,
       ] = await Promise.all([
         supabase
           .from("energy_types")
           .select("*")
           .eq("is_active", true)
-          .order("id"),
+          .order("id", {
+            ascending: true,
+          }),
 
         supabase
           .from("energy_data")
@@ -191,58 +180,70 @@ export default function Dashboard() {
 
         supabase
           .from("energy_values")
-          .select("*"),
+          .select("*")
+          .order("id", {
+            ascending: true,
+          }),
       ]);
 
-      if (typeResult.error) {
-        throw typeResult.error;
+      if (energyTypesResult.error) {
+        console.error(
+          energyTypesResult.error
+        );
       }
 
-      if (dataResult.error) {
-        throw dataResult.error;
+      if (recordsResult.error) {
+        console.error(
+          recordsResult.error
+        );
       }
 
-      if (valueResult.error) {
-        throw valueResult.error;
+      if (energyValuesResult.error) {
+        console.error(
+          energyValuesResult.error
+        );
       }
 
       const types =
-        typeResult.data || [];
-
-      const dataRows =
-        dataResult.data || [];
-
-      const valueRows =
-        valueResult.data || [];
+        energyTypesResult.data || [];
 
       setEnergyTypes(types);
-      setRecords(dataRows);
-      setEnergyValues(valueRows);
+      setRecords(recordsResult.data || []);
+      setEnergyValues(
+        energyValuesResult.data || []
+      );
 
-      if (types.length > 0) {
-        setSelectedEnergy((current) => {
-          const stillExists = types.some(
-            (item) =>
-              item.energy_key === current
-          );
-
-          return stillExists
-            ? current
-            : types[0].energy_key;
-        });
-      } else {
-        setSelectedEnergy("");
+      if (
+        types.length > 0 &&
+        !selectedEnergy
+      ) {
+        setSelectedEnergy(
+          types[0].energy_key
+        );
       }
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้"
+    } catch (error) {
+      console.error(
+        "Dashboard load error:",
+        error
       );
     } finally {
       setLoading(false);
     }
   }
+
+  /* =======================================================
+     SELECTED ENERGY TYPE
+  ======================================================= */
+
+  const selectedType = useMemo(() => {
+    return energyTypes.find(
+      (item) =>
+        item.energy_key === selectedEnergy
+    );
+  }, [
+    energyTypes,
+    selectedEnergy,
+  ]);
 
   /* =======================================================
      GET ENERGY VALUE
@@ -256,19 +257,23 @@ export default function Dashboard() {
       return 0;
     }
 
-    const dynamicValue =
-      energyValues.find(
-        (item) =>
-          item.energy_data_id === row.id &&
-          item.energy_type_id ===
-            energyType.id
-      );
+    const found = energyValues.find(
+      (item) =>
+        Number(item.energy_data_id) ===
+          Number(row.id) &&
+        Number(item.energy_type_id) ===
+          Number(energyType.id)
+    );
 
-    if (dynamicValue) {
-      return (
-        Number(dynamicValue.value) || 0
-      );
+    if (found) {
+      return Number(found.value) || 0;
     }
+
+    /*
+      รองรับข้อมูลเก่า
+      กรณี energy_data ยังมี column
+      เช่น electricity / solar / gas
+    */
 
     return (
       Number(
@@ -278,33 +283,56 @@ export default function Dashboard() {
   }
 
   /* =======================================================
-     SELECTED ENERGY
-  ======================================================= */
-
-  const selectedType =
-    energyTypes.find(
-      (item) =>
-        item.energy_key ===
-        selectedEnergy
-    );
-
-  /* =======================================================
      FILTER RECORDS
   ======================================================= */
 
   const filteredRecords = useMemo(() => {
+    if (!records.length) {
+      return [];
+    }
+
     return records
       .filter((row) => {
-        const rowPeriod =
-          row.period_type || "daily";
+        /*
+          ถ้า record เป็น daily
+          แสดงเมื่อเลือก daily
+        */
 
-        return rowPeriod === viewType;
+        if (viewType === "daily") {
+          return (
+            !row.period_type ||
+            row.period_type === "daily"
+          );
+        }
+
+        /*
+          monthly
+        */
+
+        if (viewType === "monthly") {
+          return (
+            row.period_type === "monthly"
+          );
+        }
+
+        /*
+          yearly
+        */
+
+        if (viewType === "yearly") {
+          return (
+            row.period_type === "yearly"
+          );
+        }
+
+        return true;
       })
-      .sort(
-        (a, b) =>
-          new Date(b.record_date) -
-          new Date(a.record_date)
-      );
+      .sort((a, b) => {
+        return (
+          new Date(a.record_date) -
+          new Date(b.record_date)
+        );
+      });
   }, [records, viewType]);
 
   /* =======================================================
@@ -316,62 +344,41 @@ export default function Dashboard() {
       return [];
     }
 
-    const result = {};
+    const grouped = {};
 
     filteredRecords.forEach((row) => {
-      const value = getEnergyValue(
+      const label = getPeriodLabel(
         row,
-        selectedType
+        viewType
       );
 
-      let label =
-        row.period_label ||
-        row.record_date ||
-        "";
-
-      if (viewType === "monthly") {
-        label =
-          row.period_label ||
-          row.record_date?.substring(
-            0,
-            7
-          ) ||
-          "";
-      }
-
-      if (viewType === "yearly") {
-        label =
-          row.period_label ||
-          row.record_date?.substring(
-            0,
-            4
-          ) ||
-          "";
-      }
-
-      if (!result[label]) {
-        result[label] = {
+      if (!grouped[label]) {
+        grouped[label] = {
           label,
           value: 0,
         };
       }
 
-      result[label].value += value;
+      grouped[label].value +=
+        getEnergyValue(
+          row,
+          selectedType
+        );
     });
 
-    return Object.values(result);
+    return Object.values(grouped);
   }, [
     filteredRecords,
-    energyValues,
     selectedType,
     viewType,
+    energyValues,
   ]);
 
   /* =======================================================
      SUMMARY
   ======================================================= */
 
-  const summary = useMemo(() => {
+  const summaryData = useMemo(() => {
     return energyTypes.map((type) => {
       let total = 0;
 
@@ -388,8 +395,35 @@ export default function Dashboard() {
       };
     });
   }, [
-    records,
     energyTypes,
+    records,
+    energyValues,
+  ]);
+
+  /* =======================================================
+     TOTAL SELECTED ENERGY
+  ======================================================= */
+
+  const selectedTotal = useMemo(() => {
+    if (!selectedType) {
+      return 0;
+    }
+
+    return filteredRecords.reduce(
+      (sum, row) => {
+        return (
+          sum +
+          getEnergyValue(
+            row,
+            selectedType
+          )
+        );
+      },
+      0
+    );
+  }, [
+    filteredRecords,
+    selectedType,
     energyValues,
   ]);
 
@@ -399,50 +433,19 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <>
-        <style jsx global>{`
-          .loadingScreen {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: #f8fafc;
-            color: #0f172a;
-            font-family:
-              Arial,
-              "Noto Sans Thai",
-              sans-serif;
-          }
-
-          .loadingIcon {
-            font-size: 52px;
-            margin-bottom: 10px;
-          }
-
-          .loadingScreen h2 {
-            margin: 0;
-          }
-
-          .loadingScreen p {
-            color: #64748b;
-          }
-        `}</style>
-
-        <div className="loadingScreen">
-          <div className="loadingIcon">
-            ⚡
-          </div>
-
-          <h2>
-            กำลังโหลดข้อมูลพลังงาน
-          </h2>
-
-          <p>
-            กรุณารอสักครู่...
-          </p>
-        </div>
-      </>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8fafc",
+          fontSize: "18px",
+          color: "#475569",
+        }}
+      >
+        กำลังโหลดข้อมูล...
+      </div>
     );
   }
 
@@ -451,396 +454,973 @@ export default function Dashboard() {
   ======================================================= */
 
   return (
-    <>
-      <style jsx global>{`
-        * {
-          box-sizing: border-box;
-        }
+    <div className="dashboard-page">
 
-        body {
-          margin: 0;
-          padding: 0;
-          font-family:
-            Arial,
-            "Noto Sans Thai",
-            sans-serif;
-          background:
-            linear-gradient(
-              135deg,
-              #f8fafc 0%,
-              #eef5ff 100%
-            );
-          color: #172033;
-        }
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-        a {
-          color: inherit;
-        }
+      <div className="dashboard-header">
 
-        button,
-        select {
-          font-family: inherit;
-        }
+        <div>
+          <h1>
+            Dashboard
+          </h1>
 
-        /* ==============================
-           PAGE
-        ============================== */
+          <p>
+            ระบบจัดการและติดตามการใช้พลังงานโรงงาน
+          </p>
+        </div>
 
-        .page {
+        <div className="header-date">
+          <div className="header-date-icon">
+            📊
+          </div>
+
+          <div>
+            <div className="header-date-title">
+              ข้อมูลพลังงาน
+            </div>
+
+            <div className="header-date-sub">
+              Factory Energy Management
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* =================================================
+          SUMMARY CARDS
+      ================================================= */}
+
+      <div className="summary-grid">
+
+        {summaryData.map((item) => (
+          <div
+            className="summary-card"
+            key={item.id}
+          >
+
+            <div className="summary-card-top">
+
+              <div className="summary-icon">
+                {getEnergyIcon(
+                  item.energy_name
+                )}
+              </div>
+
+              <div className="summary-name">
+                {item.energy_name}
+              </div>
+
+            </div>
+
+            <div className="summary-value">
+              {formatNumber(item.total)}
+            </div>
+
+            <div className="summary-unit">
+              {item.unit}
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+
+      {/* =================================================
+          ANALYSIS HEADER
+      ================================================= */}
+
+      <div className="analysis-section">
+
+        <div className="section-title">
+          <div>
+            <h2>
+              วิเคราะห์ข้อมูลพลังงาน
+            </h2>
+
+            <p>
+              แสดงข้อมูลตามช่วงเวลาที่เลือก
+            </p>
+          </div>
+
+        </div>
+
+        {/* =================================================
+            PERIOD TABS
+        ================================================= */}
+
+        <div className="period-tabs">
+
+          <button
+            className={
+              viewType === "daily"
+                ? "period-tab active"
+                : "period-tab"
+            }
+            onClick={() =>
+              setViewType("daily")
+            }
+          >
+            รายวัน
+          </button>
+
+          <button
+            className={
+              viewType === "monthly"
+                ? "period-tab active"
+                : "period-tab"
+            }
+            onClick={() =>
+              setViewType("monthly")
+            }
+          >
+            รายเดือน
+          </button>
+
+          <button
+            className={
+              viewType === "yearly"
+                ? "period-tab active"
+                : "period-tab"
+            }
+            onClick={() =>
+              setViewType("yearly")
+            }
+          >
+            รายปี
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          SELECTED ENERGY INFO
+      ================================================= */}
+
+      <div className="selected-energy-card">
+
+        <div className="selected-energy-left">
+
+          <div className="selected-energy-icon">
+            {getEnergyIcon(
+              selectedType?.energy_name
+            )}
+          </div>
+
+          <div>
+
+            <div className="selected-energy-label">
+              พลังงานที่กำลังแสดง
+            </div>
+
+            <div className="selected-energy-name">
+              {selectedType?.energy_name ||
+                "-"}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="selected-energy-total">
+
+          <div className="selected-total-label">
+            รวมช่วงที่เลือก
+          </div>
+
+          <div className="selected-total-value">
+            {formatNumber(selectedTotal)}
+          </div>
+
+          <div className="selected-total-unit">
+            {selectedType?.unit || ""}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          LINE CHART
+      ================================================= */}
+
+      <div className="chart-card">
+
+        <div className="chart-header">
+
+          <div>
+            <h3>
+              📈 กราฟเส้น
+            </h3>
+
+            <p>
+              {selectedType?.energy_name ||
+                "ข้อมูลพลังงาน"}{" "}
+              ({selectedType?.unit || ""})
+            </p>
+          </div>
+
+        </div>
+
+        <div className="chart-container">
+
+          {chartData.length === 0 ? (
+            <div className="empty-chart">
+              ยังไม่มีข้อมูลสำหรับช่วงเวลานี้
+            </div>
+          ) : (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart
+                data={chartData}
+                margin={{
+                  top: 10,
+                  right: 30,
+                  left: 10,
+                  bottom: 10,
+                }}
+              >
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                />
+
+                <XAxis
+                  dataKey="label"
+                  tick={{
+                    fontSize: 12,
+                  }}
+                />
+
+                <YAxis
+                  tick={{
+                    fontSize: 12,
+                  }}
+                />
+
+                <Tooltip
+                  formatter={(value) => [
+                    formatNumber(value),
+                    selectedType?.energy_name ||
+                      "พลังงาน",
+                  ]}
+                  labelFormatter={(label) =>
+                    `ช่วงเวลา: ${label}`
+                  }
+                />
+
+                <Legend />
+
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name={
+                    selectedType?.energy_name ||
+                    "การใช้พลังงาน"
+                  }
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{
+                    r: 4,
+                  }}
+                  activeDot={{
+                    r: 6,
+                  }}
+                />
+
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          BAR CHART
+      ================================================= */}
+
+      <div className="chart-card">
+
+        <div className="chart-header">
+
+          <div>
+            <h3>
+              📊 กราฟแท่ง
+            </h3>
+
+            <p>
+              {selectedType?.energy_name ||
+                "ข้อมูลพลังงาน"}{" "}
+              ({selectedType?.unit || ""})
+            </p>
+          </div>
+
+        </div>
+
+        <div className="chart-container">
+
+          {chartData.length === 0 ? (
+            <div className="empty-chart">
+              ยังไม่มีข้อมูลสำหรับช่วงเวลานี้
+            </div>
+          ) : (
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <BarChart
+                data={chartData}
+                margin={{
+                  top: 10,
+                  right: 30,
+                  left: 10,
+                  bottom: 10,
+                }}
+              >
+
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                />
+
+                <XAxis
+                  dataKey="label"
+                  tick={{
+                    fontSize: 12,
+                  }}
+                />
+
+                <YAxis
+                  tick={{
+                    fontSize: 12,
+                  }}
+                />
+
+                <Tooltip
+                  formatter={(value) => [
+                    formatNumber(value),
+                    selectedType?.energy_name ||
+                      "พลังงาน",
+                  ]}
+                  labelFormatter={(label) =>
+                    `ช่วงเวลา: ${label}`
+                  }
+                />
+
+                <Legend />
+
+                <Bar
+                  dataKey="value"
+                  name={
+                    selectedType?.energy_name ||
+                    "การใช้พลังงาน"
+                  }
+                  fill="#3b82f6"
+                  radius={[
+                    6,
+                    6,
+                    0,
+                    0,
+                  ]}
+                />
+
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          DATA TABLE
+      ================================================= */}
+
+      <div className="data-table-card">
+
+        {/* TABLE HEADER */}
+
+        <div className="table-header">
+
+          <div>
+
+            <h2>
+              ข้อมูลพลังงาน
+            </h2>
+
+            <p>
+              รายการข้อมูลตามช่วงเวลาที่เลือก
+            </p>
+
+          </div>
+
+          {/* ENERGY SELECTOR */}
+          <div className="energy-selector">
+
+            <label>
+              เลือกข้อมูลพลังงาน
+            </label>
+
+            <select
+              value={selectedEnergy}
+              onChange={(e) =>
+                setSelectedEnergy(
+                  e.target.value
+                )
+              }
+            >
+
+              {energyTypes.map(
+                (type) => (
+                  <option
+                    key={type.id}
+                    value={
+                      type.energy_key
+                    }
+                  >
+                    {getEnergyIcon(
+                      type.energy_name
+                    )}{" "}
+                    {type.energy_name}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          </div>
+
+        </div>
+
+        {/* TABLE */}
+
+        {filteredRecords.length === 0 ? (
+
+          <div className="empty-table">
+            <div className="empty-table-icon">
+              📋
+            </div>
+
+            <h3>
+              ยังไม่มีข้อมูล
+            </h3>
+
+            <p>
+              ยังไม่มีข้อมูลสำหรับช่วงเวลาที่เลือก
+            </p>
+          </div>
+
+        ) : (
+
+          <div className="table-wrapper">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>
+                    ลำดับ
+                  </th>
+
+                  <th>
+                    ช่วงเวลา
+                  </th>
+
+                  <th>
+                    วันที่บันทึก
+                  </th>
+
+                  <th>
+                    {selectedType?.energy_name ||
+                      "พลังงาน"}
+                  </th>
+
+                  <th>
+                    หน่วย
+                  </th>
+
+                  <th>
+                    หมายเหตุ
+                  </th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                {filteredRecords
+                  .slice()
+                  .reverse()
+                  .map(
+                    (row, index) => {
+
+                      const value =
+                        getEnergyValue(
+                          row,
+                          selectedType
+                        );
+
+                      return (
+                        <tr
+                          key={row.id}
+                        >
+
+                          <td>
+                            {index + 1}
+                          </td>
+
+                          <td>
+                            <span className="period-badge">
+                              {getPeriodLabel(
+                                row,
+                                viewType
+                              )}
+                            </span>
+                          </td>
+
+                          <td>
+                            {row.record_date ||
+                              "-"}
+                          </td>
+
+                          <td className="energy-value-cell">
+                            {formatNumber(
+                              value
+                            )}
+                          </td>
+
+                          <td>
+                            {selectedType?.unit ||
+                              "-"}
+                          </td>
+
+                          <td className="note-cell">
+                            {row.note ||
+                              "-"}
+                          </td>
+
+                        </tr>
+                      );
+                    }
+                  )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </div>
+
+      {/* =================================================
+          FOOTER
+      ================================================= */}
+
+      <div className="dashboard-footer">
+
+        Factory Energy Management System
+
+      </div>
+
+      {/* =================================================
+          PAGE CSS
+      ================================================= */}
+
+      <style jsx>{`
+
+        .dashboard-page {
+          padding: 32px;
           min-height: 100vh;
-          padding: 28px;
+          background: #f8fafc;
         }
 
-        .container {
-          width: 100%;
-          max-width: 1450px;
-          margin: 0 auto;
-        }
+        /* HEADER */
 
-        /* ==============================
-           HEADER
-        ============================== */
-
-        .header {
-          position: relative;
-          overflow: hidden;
-          background:
-            linear-gradient(
-              135deg,
-              #0f172a,
-              #172554
-            );
-          color: white;
-          border-radius: 24px;
-          padding: 30px;
-          margin-bottom: 24px;
-          box-shadow:
-            0 15px 40px
-            rgba(15, 23, 42, 0.18);
-        }
-
-        .headerGlow {
-          position: absolute;
-          width: 300px;
-          height: 300px;
-          border-radius: 50%;
-          background:
-            rgba(59, 130, 246, 0.15);
-          right: -80px;
-          top: -120px;
-        }
-
-        .headerContent {
-          position: relative;
-          z-index: 2;
-        }
-
-        .headerTitle {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-
-        .logo {
-          width: 58px;
-          height: 58px;
-          border-radius: 16px;
-          background:
-            rgba(255,255,255,0.12);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 30px;
-        }
-
-        .header h1 {
-          margin: 0;
-          font-size: 29px;
-          font-weight: 700;
-        }
-
-        .headerSubtitle {
-          margin: 8px 0 0;
-          color: #cbd5e1;
-          font-size: 15px;
-        }
-
-        .headerButtons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 25px;
-        }
-
-        .headerButton {
-          text-decoration: none;
-          padding: 11px 17px;
-          border-radius: 11px;
-          background:
-            rgba(255,255,255,0.1);
-          color: white;
-          border:
-            1px solid
-            rgba(255,255,255,0.15);
-          transition: 0.2s;
-          font-size: 14px;
-        }
-
-        .headerButton:hover {
-          background:
-            rgba(255,255,255,0.2);
-          transform:
-            translateY(-1px);
-        }
-
-        .headerButton.primary {
-          background: white;
-          color: #172033;
-          font-weight: 600;
-        }
-
-        /* ==============================
-           SECTION
-        ============================== */
-
-        .sectionTitle {
+        .dashboard-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin: 28px 0 14px;
+          gap: 20px;
+          margin-bottom: 28px;
         }
 
-        .sectionTitle h2 {
+        .dashboard-header h1 {
           margin: 0;
-          font-size: 19px;
+          font-size: 32px;
+          font-weight: 700;
+          color: #0f172a;
         }
 
-        .sectionTitle span {
-          font-size: 13px;
-          color: #718096;
+        .dashboard-header p {
+          margin: 8px 0 0;
+          color: #64748b;
+          font-size: 15px;
         }
 
-        /* ==============================
-           SUMMARY
-        ============================== */
+        .header-date {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 12px 16px;
+          box-shadow: 0 2px 8px rgba(
+            15,
+            23,
+            42,
+            0.04
+          );
+        }
 
-        .summaryGrid {
+        .header-date-icon {
+          width: 42px;
+          height: 42px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #eff6ff;
+          font-size: 22px;
+        }
+
+        .header-date-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .header-date-sub {
+          margin-top: 3px;
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        /* SUMMARY */
+
+        .summary-grid {
           display: grid;
           grid-template-columns:
             repeat(
               auto-fit,
               minmax(210px, 1fr)
             );
-          gap: 16px;
+          gap: 18px;
+          margin-bottom: 28px;
         }
 
-        .summaryCard {
-          position: relative;
-          overflow: hidden;
+        .summary-card {
           background: white;
-          border-radius: 18px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
           padding: 20px;
-          border:
-            1px solid #e8edf5;
-          box-shadow:
-            0 5px 20px
-            rgba(15, 23, 42, 0.05);
-          transition: 0.2s;
+          box-shadow: 0 3px 12px
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
-        .summaryCard:hover {
-          transform:
-            translateY(-3px);
-          box-shadow:
-            0 10px 28px
-            rgba(15, 23, 42, 0.09);
-        }
-
-        .summaryTop {
+        .summary-card-top {
           display: flex;
-          justify-content: space-between;
           align-items: center;
+          gap: 10px;
         }
 
-        .summaryName {
-          color: #64748b;
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        .summaryIcon {
-          width: 45px;
-          height: 45px;
-          border-radius: 13px;
-          background: #eff6ff;
+        .summary-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 23px;
+          background: #eff6ff;
+          font-size: 21px;
         }
 
-        .summaryValue {
+        .summary-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .summary-value {
+          margin-top: 20px;
           font-size: 27px;
           font-weight: 700;
-          margin-top: 16px;
           color: #0f172a;
         }
 
-        .summaryUnit {
+        .summary-unit {
           margin-top: 4px;
-          font-size: 12px;
-          color: #94a3b8;
+          color: #64748b;
+          font-size: 13px;
         }
 
-        /* ==============================
-           CHART CARD
-        ============================== */
+        /* ANALYSIS */
 
-        .chartCard {
-          background: white;
-          border-radius: 18px;
-          padding: 22px;
-          margin-top: 20px;
-          border:
-            1px solid #e8edf5;
-          box-shadow:
-            0 5px 20px
-            rgba(15, 23, 42, 0.05);
-        }
-
-        .chartHeader {
+        .analysis-section {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 15px;
+          gap: 20px;
           margin-bottom: 18px;
         }
 
-        .chartHeader h2 {
+        .section-title h2 {
           margin: 0;
-          font-size: 18px;
+          font-size: 22px;
+          color: #0f172a;
         }
 
-        .chartHeader p {
+        .section-title p {
+          margin: 5px 0 0;
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        /* PERIOD */
+
+        .period-tabs {
+          display: flex;
+          gap: 6px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 5px;
+        }
+
+        .period-tab {
+          border: none;
+          background: transparent;
+          padding: 9px 18px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+          color: #64748b;
+          transition: 0.2s;
+        }
+
+        .period-tab:hover {
+          background: #f1f5f9;
+        }
+
+        .period-tab.active {
+          background: #2563eb;
+          color: white;
+          font-weight: 600;
+        }
+
+        /* SELECTED ENERGY */
+
+        .selected-energy-card {
+          background: linear-gradient(
+            135deg,
+            #eff6ff,
+            #ffffff
+          );
+          border: 1px solid #bfdbfe;
+          border-radius: 16px;
+          padding: 18px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .selected-energy-left {
+          display: flex;
+          align-items: center;
+          gap: 13px;
+        }
+
+        .selected-energy-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 25px;
+          border: 1px solid #dbeafe;
+        }
+
+        .selected-energy-label {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .selected-energy-name {
+          margin-top: 3px;
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .selected-energy-total {
+          text-align: right;
+        }
+
+        .selected-total-label {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .selected-total-value {
+          margin-top: 3px;
+          font-size: 22px;
+          font-weight: 700;
+          color: #2563eb;
+        }
+
+        .selected-total-unit {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        /* CHART CARD */
+
+        .chart-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 3px 12px
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
+        }
+
+        .chart-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .chart-header h3 {
+          margin: 0;
+          font-size: 17px;
+          color: #0f172a;
+        }
+
+        .chart-header p {
           margin: 5px 0 0;
           font-size: 13px;
           color: #64748b;
         }
 
-        .chartBadge {
-          white-space: nowrap;
-          background: #eff6ff;
-          color: #2563eb;
-          padding: 7px 12px;
-          border-radius: 9px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .chart {
+        .chart-container {
           width: 100%;
           height: 360px;
-          min-height: 360px;
         }
 
-        .emptyChart {
-          width: 100%;
-          height: 360px;
+        .empty-chart {
+          height: 100%;
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-direction: column;
           color: #94a3b8;
-          background: #f8fafc;
-          border-radius: 12px;
-        }
-
-        .emptyChartIcon {
-          font-size: 38px;
-          margin-bottom: 8px;
-        }
-
-        /* ==============================
-           TABLE
-        ============================== */
-
-        .tableCard {
-          background: white;
-          border-radius: 18px;
-          padding: 22px;
-          margin-top: 20px;
-          border:
-            1px solid #e8edf5;
-          box-shadow:
-            0 5px 20px
-            rgba(15, 23, 42, 0.05);
-        }
-
-        .tableControls {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 15px;
-          margin-bottom: 18px;
-          flex-wrap: wrap;
-        }
-
-        .tableTabs {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .tableTab {
-          border:
-            1px solid #dbe3ef;
-          background: #f8fafc;
-          color: #64748b;
-          padding: 9px 16px;
-          border-radius: 9px;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 600;
-          transition: 0.2s;
-        }
-
-        .tableTab:hover {
-          background: #eff6ff;
-          color: #2563eb;
-        }
-
-        .tableTab.active {
-          background: #2563eb;
-          border-color: #2563eb;
-          color: white;
-        }
-
-        .tableEnergySelect {
-          min-width: 210px;
-        }
-
-        .select {
-          width: 100%;
-          min-width: 210px;
-          padding: 10px 13px;
-          border:
-            1px solid #dbe3ef;
-          border-radius: 10px;
-          background: white;
-          color: #172033;
-          outline: none;
-          cursor: pointer;
           font-size: 14px;
         }
 
-        .select:focus {
-          border-color: #3b82f6;
-          box-shadow:
-            0 0 0 3px
-            rgba(59,130,246,0.12);
+        /* DATA TABLE */
+
+        .data-table-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 3px 12px
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
-        .tableWrapper {
+        .table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          gap: 20px;
+          padding: 22px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table-header h2 {
+          margin: 0;
+          font-size: 20px;
+          color: #0f172a;
+        }
+
+        .table-header p {
+          margin: 5px 0 0;
+          font-size: 13px;
+          color: #64748b;
+        }
+
+        /* SELECTOR */
+
+        .energy-selector {
+          min-width: 220px;
+        }
+
+        .energy-selector label {
+          display: block;
+          margin-bottom: 6px;
+          font-size: 12px;
+          color: #64748b;
+          font-weight: 600;
+        }
+
+        .energy-selector select {
+          width: 100%;
+          height: 40px;
+          border: 1px solid #cbd5e1;
+          border-radius: 9px;
+          padding: 0 12px;
+          background: white;
+          color: #0f172a;
+          font-size: 14px;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .energy-selector select:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 3px
+            rgba(
+              37,
+              99,
+              235,
+              0.1
+            );
+        }
+
+        /* TABLE */
+
+        .table-wrapper {
           width: 100%;
           overflow-x: auto;
         }
@@ -848,7 +1428,6 @@ export default function Dashboard() {
         table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 700px;
         }
 
         thead {
@@ -856,872 +1435,150 @@ export default function Dashboard() {
         }
 
         th {
+          padding: 14px 16px;
           text-align: left;
-          padding: 13px 15px;
           font-size: 13px;
+          font-weight: 700;
           color: #475569;
-          border-bottom:
-            1px solid #e2e8f0;
+          border-bottom: 1px solid #e2e8f0;
           white-space: nowrap;
         }
 
-        th small {
-          color: #94a3b8;
-          font-weight: 400;
-        }
-
         td {
-          padding: 14px 15px;
-          font-size: 13px;
+          padding: 14px 16px;
+          font-size: 14px;
           color: #334155;
-          border-bottom:
-            1px solid #edf2f7;
+          border-bottom: 1px solid #f1f5f9;
+          white-space: nowrap;
         }
 
         tbody tr:hover {
-          background: #f8fbff;
+          background: #f8fafc;
         }
 
-        .empty {
-          padding: 50px 20px;
+        .period-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 5px 9px;
+          border-radius: 7px;
+          background: #eff6ff;
+          color: #2563eb;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .energy-value-cell {
+          font-weight: 700;
+          color: #2563eb;
+        }
+
+        .note-cell {
+          white-space: normal;
+          min-width: 180px;
+          max-width: 300px;
+        }
+
+        /* EMPTY */
+
+        .empty-table {
           text-align: center;
+          padding: 60px 20px;
+        }
+
+        .empty-table-icon {
+          font-size: 40px;
+          margin-bottom: 10px;
+        }
+
+        .empty-table h3 {
+          margin: 0;
+          color: #334155;
+        }
+
+        .empty-table p {
+          margin: 7px 0 0;
           color: #94a3b8;
+          font-size: 14px;
         }
 
-        .empty p {
-          margin: 10px 0 15px;
-        }
+        /* FOOTER */
 
-        .empty a {
-          display: inline-block;
-          text-decoration: none;
-          background: #2563eb;
-          color: white;
-          padding: 10px 16px;
-          border-radius: 9px;
-          font-size: 13px;
-        }
-
-        /* ==============================
-           ERROR
-        ============================== */
-
-        .errorBox {
-          background: #fff1f2;
-          color: #be123c;
-          border:
-            1px solid #fecdd3;
-          border-radius: 12px;
-          padding: 14px 16px;
-          margin-bottom: 20px;
-        }
-
-        /* ==============================
-           FOOTER
-        ============================== */
-
-        .footer {
+        .dashboard-footer {
           text-align: center;
-          padding: 30px 10px;
           color: #94a3b8;
           font-size: 12px;
+          padding: 28px 0 10px;
         }
 
-        /* ==============================
-           MOBILE
-        ============================== */
+        /* RESPONSIVE */
 
         @media (max-width: 900px) {
-          .page {
-            padding: 18px;
+
+          .dashboard-page {
+            padding: 22px;
           }
 
-          .header {
-            padding: 24px;
-          }
-
-          .header h1 {
-            font-size: 24px;
-          }
-
-          .chart {
-            height: 300px;
-            min-height: 300px;
-          }
-
-          .emptyChart {
-            height: 300px;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .page {
-            padding: 12px;
-          }
-
-          .header {
-            border-radius: 16px;
-            padding: 20px;
-          }
-
-          .headerTitle {
-            align-items: flex-start;
-          }
-
-          .logo {
-            width: 48px;
-            height: 48px;
-            font-size: 25px;
-          }
-
-          .header h1 {
-            font-size: 20px;
-          }
-
-          .headerSubtitle {
-            font-size: 13px;
-          }
-
-          .headerButtons {
+          .dashboard-header {
             flex-direction: column;
-          }
-
-          .headerButton {
-            text-align: center;
-          }
-
-          .summaryGrid {
-            grid-template-columns:
-              repeat(2, 1fr);
-            gap: 10px;
-          }
-
-          .summaryCard {
-            padding: 15px;
-          }
-
-          .summaryValue {
-            font-size: 21px;
-          }
-
-          .summaryIcon {
-            width: 38px;
-            height: 38px;
-            font-size: 19px;
-          }
-
-          .chartCard,
-          .tableCard {
-            padding: 15px;
-            border-radius: 15px;
-          }
-
-          .chartHeader {
             align-items: flex-start;
           }
 
-          .tableControls {
+          .analysis-section {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .selected-energy-card {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .selected-energy-total {
+            text-align: left;
+          }
+
+          .table-header {
             flex-direction: column;
             align-items: stretch;
           }
 
-          .tableTabs {
+          .energy-selector {
             width: 100%;
           }
 
-          .tableTab {
-            flex: 1;
-          }
-
-          .tableEnergySelect {
-            width: 100%;
-            min-width: 0;
-          }
-
-          .select {
-            min-width: 0;
-          }
         }
+
+        @media (max-width: 600px) {
+
+          .dashboard-page {
+            padding: 15px;
+          }
+
+          .dashboard-header h1 {
+            font-size: 26px;
+          }
+
+          .period-tabs {
+            width: 100%;
+          }
+
+          .period-tab {
+            flex: 1;
+            padding: 9px 8px;
+          }
+
+          .chart-container {
+            height: 300px;
+          }
+
+          .summary-grid {
+            grid-template-columns: 1fr;
+          }
+
+        }
+
       `}</style>
 
-      <main className="page">
-
-        <div className="container">
-
-          {/* =================================================
-              HEADER
-          ================================================= */}
-
-          <header className="header">
-
-            <div className="headerGlow" />
-
-            <div className="headerContent">
-
-              <div className="headerTitle">
-
-                <div className="logo">
-                  ⚡
-                </div>
-
-                <div>
-
-                  <h1>
-                    Factory Energy Management
-                  </h1>
-
-                  <p className="headerSubtitle">
-                    ระบบจัดการและติดตามการใช้พลังงานในโรงงาน
-                  </p>
-
-                </div>
-
-              </div>
-
-
-              <div className="headerButtons">
-
-                <a
-                  href="/input"
-                  className="headerButton primary"
-                >
-                  ＋ เพิ่มข้อมูลพลังงาน
-                </a>
-
-                <a
-                  href="/edit"
-                  className="headerButton"
-                >
-                  ✏️ แก้ไขข้อมูล
-                </a>
-
-                <a
-                  href="/settings"
-                  className="headerButton"
-                >
-                  ⚙️ ตั้งค่า
-                </a>
-
-              </div>
-
-            </div>
-
-          </header>
-
-
-          {/* =================================================
-              ERROR
-          ================================================= */}
-
-          {error && (
-            <div className="errorBox">
-              ⚠️ {error}
-            </div>
-          )}
-
-
-          {/* =================================================
-              SUMMARY
-          ================================================= */}
-
-          <div className="sectionTitle">
-
-            <h2>
-              ภาพรวมการใช้พลังงาน
-            </h2>
-
-            <span>
-              ข้อมูลสะสมทั้งหมด
-            </span>
-
-          </div>
-
-
-          <section className="summaryGrid">
-
-            {summary.map((item) => (
-
-              <div
-                className="summaryCard"
-                key={item.id}
-              >
-
-                <div className="summaryTop">
-
-                  <div className="summaryName">
-                    {item.energy_name}
-                  </div>
-
-                  <div className="summaryIcon">
-                    {getEnergyIcon(
-                      item.energy_name
-                    )}
-                  </div>
-
-                </div>
-
-                <div className="summaryValue">
-                  {formatNumber(item.total)}
-                </div>
-
-                <div className="summaryUnit">
-                  หน่วย {item.unit}
-                </div>
-
-              </div>
-
-            ))}
-
-            {summary.length === 0 && (
-
-              <div className="summaryCard">
-
-                <div className="summaryName">
-                  ยังไม่มีประเภทพลังงาน
-                </div>
-
-                <div className="summaryUnit">
-                  กรุณาเพิ่มหัวข้อที่หน้า ตั้งค่า
-                </div>
-
-              </div>
-
-            )}
-
-          </section>
-
-
-          {/* =================================================
-              LINE CHART
-          ================================================= */}
-
-          <section className="chartCard">
-
-            <div className="chartHeader">
-
-              <div>
-
-                <h2>
-                  📈 แนวโน้มการใช้{" "}
-                  {getEnergyIcon(
-                    selectedType?.energy_name
-                  )}{" "}
-                  {selectedType?.energy_name ||
-                    "พลังงาน"}
-                </h2>
-
-                <p>
-                  {getPeriodName(viewType)}
-                </p>
-
-              </div>
-
-              <div className="chartBadge">
-                {selectedType?.unit || "-"}
-              </div>
-
-            </div>
-
-
-            <div className="chart">
-
-              {chartData.length > 0 ? (
-
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                >
-
-                  <LineChart
-                    data={chartData}
-                    margin={{
-                      top: 10,
-                      right: 20,
-                      left: 5,
-                      bottom: 10,
-                    }}
-                  >
-
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                    />
-
-                    <XAxis
-                      dataKey="label"
-                      tick={{
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <YAxis
-                      tick={{
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <Tooltip
-                      formatter={(value) => [
-                        `${formatNumber(value)} ${
-                          selectedType?.unit || ""
-                        }`,
-                        selectedType?.energy_name ||
-                          "พลังงาน",
-                      ]}
-                    />
-
-                    <Legend />
-
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      name={
-                        selectedType?.energy_name ||
-                        "พลังงาน"
-                      }
-                      stroke="#2563eb"
-                      strokeWidth={3}
-                      dot={{
-                        r: 4,
-                      }}
-                      activeDot={{
-                        r: 6,
-                      }}
-                    />
-
-                  </LineChart>
-
-                </ResponsiveContainer>
-
-              ) : (
-
-                <div className="emptyChart">
-
-                  <div className="emptyChartIcon">
-                    📈
-                  </div>
-
-                  <div>
-                    ยังไม่มีข้อมูลสำหรับกราฟ
-                  </div>
-
-                </div>
-
-              )}
-
-            </div>
-
-          </section>
-
-
-          {/* =================================================
-              BAR CHART
-          ================================================= */}
-
-          <section className="chartCard">
-
-            <div className="chartHeader">
-
-              <div>
-
-                <h2>
-                  📊 ปริมาณการใช้{" "}
-                  {getEnergyIcon(
-                    selectedType?.energy_name
-                  )}{" "}
-                  {selectedType?.energy_name ||
-                    "พลังงาน"}
-                </h2>
-
-                <p>
-                  {getPeriodName(viewType)}
-                </p>
-
-              </div>
-
-              <div className="chartBadge">
-                {chartData.length} รายการ
-              </div>
-
-            </div>
-
-
-            <div className="chart">
-
-              {chartData.length > 0 ? (
-
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                >
-
-                  <BarChart
-                    data={chartData}
-                    margin={{
-                      top: 10,
-                      right: 20,
-                      left: 5,
-                      bottom: 10,
-                    }}
-                  >
-
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                    />
-
-                    <XAxis
-                      dataKey="label"
-                      tick={{
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <YAxis
-                      tick={{
-                        fontSize: 11,
-                      }}
-                    />
-
-                    <Tooltip
-                      formatter={(value) => [
-                        `${formatNumber(value)} ${
-                          selectedType?.unit || ""
-                        }`,
-                        selectedType?.energy_name ||
-                          "พลังงาน",
-                      ]}
-                    />
-
-                    <Legend />
-
-                    <Bar
-                      dataKey="value"
-                      name={
-                        selectedType?.energy_name ||
-                        "พลังงาน"
-                      }
-                      fill="#3b82f6"
-                      radius={[
-                        6,
-                        6,
-                        0,
-                        0,
-                      ]}
-                    />
-
-                  </BarChart>
-
-                </ResponsiveContainer>
-
-              ) : (
-
-                <div className="emptyChart">
-
-                  <div className="emptyChartIcon">
-                    📊
-                  </div>
-
-                  <div>
-                    ยังไม่มีข้อมูลสำหรับกราฟ
-                  </div>
-
-                </div>
-
-              )}
-
-            </div>
-
-          </section>
-
-
-          {/* =================================================
-              ENERGY DATA TABLE
-          ================================================= */}
-
-          <section className="tableCard">
-
-            <div className="chartHeader">
-
-              <div>
-
-                <h2>
-                  📋 ข้อมูลพลังงาน
-                </h2>
-
-                <p>
-                  ตารางจะเปลี่ยนตามพลังงานและช่วงเวลาที่เลือก
-                </p>
-
-              </div>
-
-              <div className="chartBadge">
-                {filteredRecords.length} รายการ
-              </div>
-
-            </div>
-
-
-            {/* =============================================
-                PERIOD BUTTONS + ENERGY SELECT
-            ============================================= */}
-
-            <div className="tableControls">
-
-              <div className="tableTabs">
-
-                <button
-                  type="button"
-                  className={`tableTab ${
-                    viewType === "daily"
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setViewType("daily")
-                  }
-                >
-                  📅 รายวัน
-                </button>
-
-
-                <button
-                  type="button"
-                  className={`tableTab ${
-                    viewType === "monthly"
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setViewType("monthly")
-                  }
-                >
-                  📆 รายเดือน
-                </button>
-
-
-                <button
-                  type="button"
-                  className={`tableTab ${
-                    viewType === "yearly"
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setViewType("yearly")
-                  }
-                >
-                  📊 รายปี
-                </button>
-
-              </div>
-
-
-              {/* ตัวเลือกพลังงาน
-                  อยู่มุมขวาบนของตาราง */}
-
-              <div className="tableEnergySelect">
-
-                <select
-                  className="select"
-                  value={selectedEnergy}
-                  onChange={(e) =>
-                    setSelectedEnergy(
-                      e.target.value
-                    )
-                  }
-                >
-
-                  {energyTypes.map(
-                    (item) => (
-
-                      <option
-                        key={item.id}
-                        value={
-                          item.energy_key
-                        }
-                      >
-                        {getEnergyIcon(
-                          item.energy_name
-                        )}{" "}
-                        {item.energy_name}
-                      </option>
-
-                    )
-                  )}
-
-                </select>
-
-              </div>
-
-            </div>
-
-
-            {/* =============================================
-                TABLE
-            ============================================= */}
-
-            <div className="tableWrapper">
-
-              <table>
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      {viewType === "daily"
-                        ? "วันที่"
-                        : viewType === "monthly"
-                        ? "เดือน"
-                        : "ปี"}
-                    </th>
-
-                    <th>
-                      รูปแบบ
-                    </th>
-
-                    <th>
-                      {getEnergyIcon(
-                        selectedType?.energy_name
-                      )}{" "}
-                      {selectedType?.energy_name ||
-                        "พลังงาน"}
-
-                      <br />
-
-                      <small>
-                        {selectedType?.unit ||
-                          ""}
-                      </small>
-                    </th>
-
-                    <th>
-                      หมายเหตุ
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                  {filteredRecords.map(
-                    (row) => (
-
-                      <tr key={row.id}>
-
-                        <td>
-
-                          {viewType === "daily"
-                            ? row.record_date
-                            : viewType ===
-                              "monthly"
-                            ? (
-                                row.period_label ||
-                                row.record_date?.substring(
-                                  0,
-                                  7
-                                )
-                              )
-                            : (
-                                row.period_label ||
-                                row.record_date?.substring(
-                                  0,
-                                  4
-                                )
-                              )}
-
-                        </td>
-
-
-                        <td>
-                          {getPeriodName(
-                            viewType
-                          )}
-                        </td>
-
-
-                        <td>
-
-                          {formatNumber(
-                            getEnergyValue(
-                              row,
-                              selectedType
-                            )
-                          )}
-
-                          {" "}
-
-                          {selectedType?.unit ||
-                            ""}
-
-                        </td>
-
-
-                        <td>
-                          {row.note || "-"}
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
-
-
-              {/* =========================================
-                  NO DATA
-              ========================================= */}
-
-              {filteredRecords.length ===
-                0 && (
-
-                <div className="empty">
-
-                  <div
-                    style={{
-                      fontSize: 40,
-                    }}
-                  >
-                    📊
-                  </div>
-
-                  <p>
-                    ยังไม่มีข้อมูล{" "}
-                    {selectedType?.energy_name ||
-                      "พลังงาน"}{" "}
-                    {getPeriodName(
-                      viewType
-                    )}
-                  </p>
-
-                  <a href="/input">
-                    ＋ เพิ่มข้อมูล
-                  </a>
-
-                </div>
-
-              )}
-
-            </div>
-
-          </section>
-
-
-          {/* =================================================
-              FOOTER
-          ================================================= */}
-
-          <div className="footer">
-            Factory Energy Management System
-          </div>
-
-        </div>
-
-      </main>
-    </>
+    </div>
   );
 }
