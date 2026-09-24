@@ -525,8 +525,6 @@ return ( <main style={pageStyle}>
     </div>
   </div>
 </main>
-```
-
 );
 }
 
