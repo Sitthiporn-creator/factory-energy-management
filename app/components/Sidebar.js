@@ -56,10 +56,11 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar">
+      {/* LOGO */}
       <div className="sidebar-brand">
         <div className="brand-icon">⚡</div>
 
-        <div>
+        <div className="brand-text">
           <div className="brand-title">ENERGY</div>
           <div className="brand-subtitle">MANAGEMENT</div>
         </div>
@@ -67,40 +68,47 @@ export default function Sidebar() {
 
       <div className="sidebar-divider" />
 
+      {/* MENU */}
       <nav className="sidebar-nav">
         {menuGroups.map((group) => (
           <div className="menu-group" key={group.title}>
             <div className="menu-title">{group.title}</div>
 
-            {group.items.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+            <div className="menu-list">
+              {group.items.map((item) => {
+                const isActive =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`menu-item ${
-                    isActive ? "menu-item-active" : ""
-                  }`}
-                >
-                  <span className="menu-icon">{item.icon}</span>
-                  <span className="menu-name">{item.name}</span>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`menu-item ${
+                      isActive ? "menu-item-active" : ""
+                    }`}
+                  >
+                    <span className="menu-icon">{item.icon}</span>
+
+                    <span className="menu-name">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>
 
+      {/* STATUS */}
       <div className="sidebar-bottom">
-        <div className="online-dot" />
+        <div className="online-dot"></div>
 
-        <div>
+        <div className="status-text">
           <div className="online-title">System Online</div>
-          <div className="online-subtitle">Energy Management</div>
+          <div className="online-subtitle">
+            Energy Management
+          </div>
         </div>
       </div>
 
@@ -110,64 +118,123 @@ export default function Sidebar() {
           left: 0;
           top: 0;
           bottom: 0;
+
           width: 250px;
+
           background:
             radial-gradient(
               circle at top left,
               rgba(59, 130, 246, 0.18),
               transparent 35%
             ),
-            linear-gradient(180deg, #0f172a 0%, #111827 100%);
+            linear-gradient(
+              180deg,
+              #0f172a 0%,
+              #111827 100%
+            );
+
           color: white;
+
           padding: 24px 16px;
+
           box-sizing: border-box;
+
           z-index: 1000;
+
           display: flex;
           flex-direction: column;
-          border-right: 1px solid rgba(255, 255, 255, 0.08);
+
+          border-right: 1px solid
+            rgba(255, 255, 255, 0.08);
         }
+
+        /* =========================
+           BRAND
+        ========================= */
 
         .sidebar-brand {
           display: flex;
           align-items: center;
+
           gap: 12px;
+
           padding: 4px 8px 18px;
         }
 
         .brand-icon {
           width: 44px;
           height: 44px;
+
           border-radius: 13px;
+
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #2563eb, #0ea5e9);
+
+          background: linear-gradient(
+            135deg,
+            #2563eb,
+            #0ea5e9
+          );
+
           font-size: 23px;
-          box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+
+          box-shadow:
+            0 8px 24px
+            rgba(37, 99, 235, 0.3);
+
+          flex-shrink: 0;
+        }
+
+        .brand-text {
+          min-width: 0;
         }
 
         .brand-title {
           font-size: 17px;
           font-weight: 800;
+
           letter-spacing: 1.2px;
+
+          line-height: 1.1;
         }
 
         .brand-subtitle {
-          margin-top: 2px;
+          margin-top: 4px;
+
           font-size: 10px;
+
           color: #94a3b8;
+
           letter-spacing: 1.5px;
+
+          line-height: 1;
         }
+
+        /* =========================
+           DIVIDER
+        ========================= */
 
         .sidebar-divider {
           height: 1px;
-          background: rgba(255, 255, 255, 0.08);
-          margin: 0 8px 18px;
+
+          background:
+            rgba(255, 255, 255, 0.08);
+
+          margin:
+            0 8px 18px;
         }
+
+        /* =========================
+           NAVIGATION
+        ========================= */
 
         .sidebar-nav {
           flex: 1;
+
           overflow-y: auto;
+
+          padding-right: 2px;
         }
 
         .menu-group {
@@ -175,89 +242,221 @@ export default function Sidebar() {
         }
 
         .menu-title {
-          padding: 0 12px;
+          padding:
+            0 12px;
+
           margin-bottom: 8px;
+
           font-size: 11px;
+
           font-weight: 700;
+
           color: #64748b;
-          text-transform: uppercase;
+
           letter-spacing: 0.8px;
         }
 
+        .menu-list {
+          width: 100%;
+        }
+
+        /* =========================
+           MENU ITEM
+        ========================= */
+
         .menu-item {
-          display: flex;
+          display: grid;
+
+          grid-template-columns:
+            30px
+            minmax(0, 1fr);
+
           align-items: center;
-          gap: 12px;
+
+          column-gap: 10px;
+
+          width: 100%;
+
           min-height: 46px;
-          padding: 0 12px;
-          margin: 4px 0;
+
+          padding:
+            0 12px;
+
+          margin:
+            4px 0;
+
           border-radius: 12px;
+
           color: #cbd5e1;
+
           text-decoration: none;
-          transition: all 0.2s ease;
+
+          transition:
+            background 0.2s ease,
+            color 0.2s ease,
+            transform 0.2s ease;
+
           font-size: 14px;
+
           font-weight: 500;
+
+          box-sizing: border-box;
         }
 
         .menu-item:hover {
-          background: rgba(255, 255, 255, 0.07);
+          background:
+            rgba(255, 255, 255, 0.07);
+
           color: white;
-          transform: translateX(2px);
+
+          transform:
+            translateX(2px);
         }
 
         .menu-item-active {
-          background: linear-gradient(
-            90deg,
-            rgba(37, 99, 235, 0.9),
-            rgba(14, 165, 233, 0.75)
-          );
+          background:
+            linear-gradient(
+              90deg,
+              rgba(37, 99, 235, 0.95),
+              rgba(14, 165, 233, 0.8)
+            );
+
           color: white;
-          box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+
+          box-shadow:
+            0 8px 20px
+            rgba(37, 99, 235, 0.2);
         }
+
+        /* =========================
+           ICON
+        ========================= */
 
         .menu-icon {
-          width: 25px;
+          width: 30px;
+          min-width: 30px;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
           text-align: center;
+
           font-size: 19px;
-          flex-shrink: 0;
+
+          line-height: 1;
         }
+
+        /* =========================
+           TEXT
+        ========================= */
 
         .menu-name {
-          white-space: nowrap;
+          min-width: 0;
+
           overflow: hidden;
+
+          white-space: nowrap;
+
           text-overflow: ellipsis;
+
+          line-height: 1.4;
         }
 
+        /* =========================
+           BOTTOM STATUS
+        ========================= */
+
         .sidebar-bottom {
-          display: flex;
+          display: grid;
+
+          grid-template-columns:
+            12px
+            minmax(0, 1fr);
+
           align-items: center;
-          gap: 10px;
-          padding: 14px 12px;
+
+          column-gap: 10px;
+
+          padding:
+            14px 12px;
+
           margin-top: 10px;
+
           border-radius: 12px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.06);
+
+          background:
+            rgba(255, 255, 255, 0.04);
+
+          border:
+            1px solid
+            rgba(255, 255, 255, 0.06);
         }
 
         .online-dot {
           width: 9px;
           height: 9px;
+
           border-radius: 50%;
+
           background: #22c55e;
-          box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
-          flex-shrink: 0;
+
+          box-shadow:
+            0 0 10px
+            rgba(34, 197, 94, 0.8);
+        }
+
+        .status-text {
+          min-width: 0;
         }
 
         .online-title {
           font-size: 12px;
+
           font-weight: 700;
+
+          line-height: 1.2;
         }
 
         .online-subtitle {
-          margin-top: 2px;
+          margin-top: 3px;
+
           font-size: 10px;
+
           color: #64748b;
+
+          line-height: 1.2;
+
+          white-space: nowrap;
+
+          overflow: hidden;
+
+          text-overflow: ellipsis;
         }
+
+        /* =========================
+           SCROLLBAR
+        ========================= */
+
+        .sidebar-nav::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+          background:
+            rgba(255, 255, 255, 0.12);
+
+          border-radius: 10px;
+        }
+
+        /* =========================
+           TABLET
+        ========================= */
 
         @media (max-width: 900px) {
           .sidebar {
@@ -265,12 +464,21 @@ export default function Sidebar() {
           }
         }
 
+        /* =========================
+           MOBILE
+        ========================= */
+
         @media (max-width: 700px) {
           .sidebar {
             position: relative;
+
             width: 100%;
+
             height: auto;
+
             min-height: auto;
+
+            padding: 16px;
           }
 
           .sidebar-nav {
