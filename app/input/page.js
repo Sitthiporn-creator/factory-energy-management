@@ -85,22 +85,15 @@ setValues((current) => ({
 }
 
 function getRecordDate() {
-// รายเดือน
 if (periodType === "monthly") {
 if (!selectedMonth || !selectedYear) {
 return "";
 }
 
 ```
-  return (
-    selectedYear +
-    "-" +
-    selectedMonth +
-    "-01"
-  );
+  return selectedYear + "-" + selectedMonth + "-01";
 }
 
-// รายปี
 if (periodType === "yearly") {
   if (!selectedYear) {
     return "";
@@ -115,7 +108,6 @@ return "";
 }
 
 function getPeriodLabel() {
-// รายเดือน
 if (periodType === "monthly") {
 if (!selectedMonth || !selectedYear) {
 return "";
@@ -125,7 +117,6 @@ return "";
   return selectedYear + "-" + selectedMonth;
 }
 
-// รายปี
 if (periodType === "yearly") {
   if (!selectedYear) {
     return "";
@@ -146,7 +137,6 @@ e.preventDefault();
 const finalRecordDate = getRecordDate();
 const finalPeriodLabel = getPeriodLabel();
 
-// ตรวจสอบช่วงเวลา
 if (!finalRecordDate || !finalPeriodLabel) {
   if (periodType === "monthly") {
     setMessage("⚠️ กรุณาเลือก เดือน และปี");
@@ -209,7 +199,7 @@ if (valuesError) {
 
 setMessage("✅ บันทึกข้อมูลสำเร็จ");
 
-// ล้างข้อมูลพลังงานและหมายเหตุ
+// ล้างข้อมูล
 setNote("");
 
 const emptyValues = {};
@@ -220,11 +210,9 @@ energyTypes.forEach((item) => {
 
 setValues(emptyValues);
 
-// ==========================================
-// หลังบันทึกข้อมูลรายเดือน
-// ให้เลื่อนไปเดือนถัดไปอัตโนมัติ
-// โดยปีจะคงเดิม
-// ==========================================
+// หลังบันทึกรายเดือน
+// เลื่อนไปเดือนถัดไปอัตโนมัติ
+// โดยปีคงเดิม
 if (periodType === "monthly") {
   const currentMonth = Number(selectedMonth);
 
