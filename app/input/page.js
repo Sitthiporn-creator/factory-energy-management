@@ -8,44 +8,60 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 );
 
+const MONTHS = [
+  "มกราคม",
+  "กุมภาพันธ์",
+  "มีนาคม",
+  "เมษายน",
+  "พฤษภาคม",
+  "มิถุนายน",
+  "กรกฎาคม",
+  "สิงหาคม",
+  "กันยายน",
+  "ตุลาคม",
+  "พฤศจิกายน",
+  "ธันวาคม",
+];
+
+const YEARS = Array.from({ length: 101 }, (_, i) => 2000 + i);
+
 export default function InputPage() {
   const today = new Date();
 
   const [energyTypes, setEnergyTypes] = useState([]);
-
   const [periodType, setPeriodType] = useState("daily");
 
-  // ปี
-  const [selectedYear, setSelectedYear] = useState(
-    today.getFullYear()
-  );
-
-  // เดือน
-  const [selectedMonth, setSelectedMonth] = useState(
-    today.getMonth() + 1
-  );
-
-  // วัน
-  const [selectedDay, setSelectedDay] = useState(
-    today.getDate()
-  );
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
   const [values, setValues] = useState({});
-
   const [note, setNote] = useState("");
 
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
-
   const [message, setMessage] = useState("");
 
-  // ==============================
-  // โหลดประเภทพลังงาน
-  // ==============================
+  const daysInMonth = new Date(
+    selectedYear,
+    selectedMonth,
+    0
+  ).getDate();
+
+  const days = Array.from(
+    { length: daysInMonth },
+    (_, i) => i + 1
+  );
+
   useEffect(() => {
     loadEnergyTypes();
   }, []);
+
+  useEffect(() => {
+    if (selectedDay > daysInMonth) {
+      setSelectedDay(daysInMonth);
+    }
+  }, [selectedMonth, selectedYear, daysInMonth, selectedDay]);
 
   async function loadEnergyTypes() {
     setLoading(true);
@@ -58,7 +74,7 @@ export default function InputPage() {
 
     if (error) {
       console.error(error);
-      setMessage("ไม่สามารถโหลดข้อมูลพลังงานได้");
+      setMessage("ไม่สามารถโหลดประเภทพลังงานได้");
     } else {
       setEnergyTypes(data || []);
     }
@@ -66,47 +82,13 @@ export default function InputPage() {
     setLoading(false);
   }
 
-  // ==============================
-  // จำนวนวันในเดือน
-  // ==============================
-  function getDaysInMonth(year, month) {
-    return new Date(year, month, 0).getDate();
-  }
-
-  // ==============================
-  // ปรับวันถ้าเปลี่ยนเดือน
-  // ==============================
-  useEffect(() => {
-    const maxDay = getDaysInMonth(
-      selectedYear,
-      selectedMonth
-    );
-
-    if (selectedDay > maxDay) {
-      setSelectedDay(maxDay);
-    }
-  }, [selectedYear, selectedMonth]);
-
-  // ==============================
-  // สร้างวันที่สำหรับบันทึก
-  // ==============================
   function getPeriodData() {
     const year = String(selectedYear);
+    const month = String(selectedMonth).padStart(2, "0");
+    const day = String(selectedDay).padStart(2, "0");
 
-    const month = String(selectedMonth).padStart(
-      2,
-      "0"
-    );
-
-    const day = String(selectedDay).padStart(
-      2,
-      "0"
-    );
-
-    // รายวัน
     if (periodType === "daily") {
-      const date =
-        year + "-" + month + "-" + day;
+      const date = `${year}-${month}-${day}`;
 
       return {
         recordDate: date,
@@ -114,638 +96,411 @@ export default function InputPage() {
       };
     }
 
-    // รายเดือน
     if (periodType === "monthly") {
-      const monthValue =
-        year + "-" + month;
-
       return {
-        recordDate:
-          year + "-" + month + "-01",
-        periodLabel: monthValue,
-      };
-    }
-
-    // รายปี
-    if (periodType === "yearly") {
-      return {
-        recordDate:
-          year + "-01-01",
-        periodLabel: year,
+        recordDate: `${year}-${month}-01`,
+        periodLabel: `${year}-${month}`,
       };
     }
 
     return {
-      recordDate: "",
-      periodLabel: "",
+      recordDate: `${year}-01-01`,
+      periodLabel: year,
     };
   }
 
-  // ==============================
-  // เปลี่ยนประเภทข้อมูล
-  // ==============================
-  function handlePeriodTypeChange(type) {
-    setPeriodType(type);
-    setMessage("");
-  }
-
-  // ==============================
-  // เปลี่ยนค่าพลังงาน
-  // ==============================
-  function handleValueChange(
-    energyTypeId,
-    value
-  ) {
+  function handleValueChange(id, value) {
     setValues((prev) => ({
       ...prev,
-      [energyTypeId]: value,
+      [id]: value,
     }));
   }
 
-  // ==============================
-  // บันทึกข้อมูล
-  // ==============================
+  function getSelectedPeriodText() {
+    if (periodType === "daily") {
+      return `${selectedDay} ${MONTHS[selectedMonth - 1]} ${selectedYear}`;
+    }
+
+    if (periodType === "monthly") {
+      return `${MONTHS[selectedMonth - 1]} ${selectedYear}`;
+    }
+
+    return `${selectedYear}`;
+  }
+
   async function handleSave() {
     setMessage("");
 
-    const {
-      recordDate,
-      periodLabel,
-    } = getPeriodData();
+    const enteredValues = energyTypes.filter((energy) => {
+      const value = values[energy.id];
 
-    if (!recordDate || !periodLabel) {
-      setMessage("กรุณาเลือกช่วงเวลา");
-      return;
-    }
-
-    const hasValue = energyTypes.some(
-      (energy) => {
-        const value = values[energy.id];
-
-        return (
-          value !== undefined &&
-          value !== "" &&
-          !isNaN(Number(value))
-        );
-      }
-    );
-
-    if (!hasValue) {
-      setMessage(
-        "กรุณากรอกข้อมูลพลังงานอย่างน้อย 1 รายการ"
+      return (
+        value !== undefined &&
+        value !== "" &&
+        !Number.isNaN(Number(value))
       );
+    });
+
+    if (enteredValues.length === 0) {
+      setMessage("กรุณากรอกข้อมูลพลังงานอย่างน้อย 1 รายการ");
       return;
     }
 
     setSaving(true);
 
     try {
-      // ==============================
-      // บันทึก energy_data
-      // ==============================
-      const {
-        data: energyData,
-        error: dataError,
-      } = await supabase
-        .from("energy_data")
-        .insert({
-          record_date: recordDate,
-          period_type: periodType,
-          period_label: periodLabel,
-          note: note || null,
-        })
-        .select()
-        .single();
+      const { recordDate, periodLabel } = getPeriodData();
 
-      if (dataError) {
-        console.error(dataError);
+      const { data: energyData, error: energyDataError } =
+        await supabase
+          .from("energy_data")
+          .insert({
+            record_date: recordDate,
+            period_type: periodType,
+            period_label: periodLabel,
+            note: note || null,
+          })
+          .select()
+          .single();
 
-        setMessage(
-          "เกิดข้อผิดพลาดในการบันทึกข้อมูล"
-        );
-
-        setSaving(false);
-        return;
+      if (energyDataError) {
+        throw energyDataError;
       }
 
-      // ==============================
-      // เตรียมค่าพลังงาน
-      // ==============================
-      const energyValues = energyTypes
-        .filter((energy) => {
-          const value = values[energy.id];
+      const valueRows = enteredValues.map((energy) => ({
+        energy_data_id: energyData.id,
+        energy_type_id: energy.id,
+        value: Number(values[energy.id]),
+      }));
 
-          return (
-            value !== undefined &&
-            value !== "" &&
-            !isNaN(Number(value))
-          );
-        })
-        .map((energy) => ({
-          energy_data_id: energyData.id,
-          energy_type_id: energy.id,
-          value: Number(values[energy.id]),
-        }));
+      const { error: valuesError } = await supabase
+        .from("energy_values")
+        .insert(valueRows);
 
-      // ==============================
-      // บันทึก energy_values
-      // ==============================
-      if (energyValues.length > 0) {
-        const {
-          error: valuesError,
-        } = await supabase
-          .from("energy_values")
-          .insert(energyValues);
+      if (valuesError) {
+        await supabase
+          .from("energy_data")
+          .delete()
+          .eq("id", energyData.id);
 
-        if (valuesError) {
-          console.error(valuesError);
-
-          await supabase
-            .from("energy_data")
-            .delete()
-            .eq("id", energyData.id);
-
-          setMessage(
-            "เกิดข้อผิดพลาดในการบันทึกค่าพลังงาน"
-          );
-
-          setSaving(false);
-          return;
-        }
+        throw valuesError;
       }
-
-      setMessage(
-        "บันทึกข้อมูลเรียบร้อยแล้ว"
-      );
 
       setValues({});
       setNote("");
 
+      setMessage("บันทึกข้อมูลพลังงานเรียบร้อยแล้ว");
     } catch (error) {
       console.error(error);
-
-      setMessage(
-        "เกิดข้อผิดพลาด กรุณาลองใหม่"
-      );
+      setMessage("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
-  // ==============================
-  // ปี
-  // ==============================
-  const years = [];
-
-  for (
-    let year = 2000;
-    year <= 2100;
-    year++
-  ) {
-    years.push(year);
-  }
-
-  // ==============================
-  // เดือน
-  // ==============================
-  const months = [
-    { value: 1, label: "มกราคม" },
-    { value: 2, label: "กุมภาพันธ์" },
-    { value: 3, label: "มีนาคม" },
-    { value: 4, label: "เมษายน" },
-    { value: 5, label: "พฤษภาคม" },
-    { value: 6, label: "มิถุนายน" },
-    { value: 7, label: "กรกฎาคม" },
-    { value: 8, label: "สิงหาคม" },
-    { value: 9, label: "กันยายน" },
-    { value: 10, label: "ตุลาคม" },
-    { value: 11, label: "พฤศจิกายน" },
-    { value: 12, label: "ธันวาคม" },
-  ];
-
-  // ==============================
-  // วัน
-  // ==============================
-  const daysInMonth = getDaysInMonth(
-    selectedYear,
-    selectedMonth
-  );
-
-  const days = [];
-
-  for (
-    let day = 1;
-    day <= daysInMonth;
-    day++
-  ) {
-    days.push(day);
-  }
-
-  const periodData = getPeriodData();
-
-  // ==============================
-  // UI เดิม
-  // ==============================
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-slate-50 text-slate-800">
+      {/* Header */}
+      <div className="border-b bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-2xl text-white shadow-lg">
+              ⚡
+            </div>
 
-      <div className="mx-auto max-w-5xl">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                เพิ่มข้อมูลพลังงาน
+              </h1>
 
-        <h1 className="mb-6 text-3xl font-bold text-gray-800">
-          เพิ่มข้อมูลพลังงาน
-        </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                บันทึกข้อมูลการใช้พลังงานเข้าสู่ระบบ
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* ช่วงเวลา */}
-        <div className="mb-6 rounded-2xl bg-white p-6 shadow">
+      <main className="mx-auto max-w-6xl px-6 py-8">
+        {/* Period Card */}
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                ช่วงเวลาข้อมูล
+              </h2>
 
-          <h2 className="mb-4 text-xl font-semibold text-gray-800">
-            เลือกช่วงเวลา
-          </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                เลือกช่วงเวลาที่ต้องการบันทึกข้อมูล
+              </p>
+            </div>
 
-          {/* ประเภท */}
-          <div className="mb-5">
-
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              ประเภทข้อมูล
-            </label>
-
-            <select
-              value={periodType}
-              onChange={(e) =>
-                handlePeriodTypeChange(
-                  e.target.value
-                )
-              }
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 md:w-72"
-            >
-              <option value="daily">
-                รายวัน
-              </option>
-
-              <option value="monthly">
-                รายเดือน
-              </option>
-
-              <option value="yearly">
-                รายปี
-              </option>
-            </select>
-
+            <div className="hidden rounded-full bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 sm:block">
+              {getSelectedPeriodText()}
+            </div>
           </div>
 
-          {/* ==============================
-              รายวัน
-          ============================== */}
-          {periodType === "daily" && (
+          {/* Period Type */}
+          <div className="grid grid-cols-3 gap-3 rounded-2xl bg-slate-100 p-2">
+            {[
+              ["daily", "รายวัน", "ข้อมูลประจำวัน"],
+              ["monthly", "รายเดือน", "ข้อมูลประจำเดือน"],
+              ["yearly", "รายปี", "ข้อมูลประจำปี"],
+            ].map(([type, title, subtitle]) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setPeriodType(type)}
+                className={`rounded-xl px-4 py-3 text-left transition ${
+                  periodType === type
+                    ? "bg-white shadow-md ring-1 ring-blue-100"
+                    : "text-slate-500 hover:bg-white/70"
+                }`}
+              >
+                <div
+                  className={`text-sm font-bold ${
+                    periodType === type
+                      ? "text-blue-600"
+                      : "text-slate-700"
+                  }`}
+                >
+                  {title}
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+                <div className="mt-1 text-xs text-slate-400">
+                  {subtitle}
+                </div>
+              </button>
+            ))}
+          </div>
 
-              {/* วัน */}
+          {/* Date Selectors */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {periodType === "daily" && (
               <div>
-
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
                   วัน
                 </label>
 
                 <select
                   value={selectedDay}
                   onChange={(e) =>
-                    setSelectedDay(
-                      Number(e.target.value)
-                    )
+                    setSelectedDay(Number(e.target.value))
                   }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
-
                   {days.map((day) => (
-                    <option
-                      key={day}
-                      value={day}
-                    >
-                      วันที่ {day}
+                    <option key={day} value={day}>
+                      {day}
                     </option>
                   ))}
-
                 </select>
-
               </div>
+            )}
 
-              {/* เดือน */}
+            {(periodType === "daily" ||
+              periodType === "monthly") && (
               <div>
-
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
                   เดือน
                 </label>
 
                 <select
                   value={selectedMonth}
                   onChange={(e) =>
-                    setSelectedMonth(
-                      Number(e.target.value)
-                    )
+                    setSelectedMonth(Number(e.target.value))
                   }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
-
-                  {months.map((month) => (
-                    <option
-                      key={month.value}
-                      value={month.value}
-                    >
-                      {month.label}
+                  {MONTHS.map((month, index) => (
+                    <option key={month} value={index + 1}>
+                      {month}
                     </option>
                   ))}
-
                 </select>
-
               </div>
+            )}
 
-              {/* ปี */}
-              <div>
-
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  ปี
-                </label>
-
-                <select
-                  value={selectedYear}
-                  onChange={(e) =>
-                    setSelectedYear(
-                      Number(e.target.value)
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
-                >
-
-                  {years.map((year) => (
-                    <option
-                      key={year}
-                      value={year}
-                    >
-                      {year}
-                    </option>
-                  ))}
-
-                </select>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {/* ==============================
-              รายเดือน
-          ============================== */}
-          {periodType === "monthly" && (
-
-            <div className="grid gap-4 md:grid-cols-2">
-
-              {/* เดือน */}
-              <div>
-
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  เดือน
-                </label>
-
-                <select
-                  value={selectedMonth}
-                  onChange={(e) =>
-                    setSelectedMonth(
-                      Number(e.target.value)
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
-                >
-
-                  {months.map((month) => (
-                    <option
-                      key={month.value}
-                      value={month.value}
-                    >
-                      {month.label}
-                    </option>
-                  ))}
-
-                </select>
-
-              </div>
-
-              {/* ปี */}
-              <div>
-
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  ปี
-                </label>
-
-                <select
-                  value={selectedYear}
-                  onChange={(e) =>
-                    setSelectedYear(
-                      Number(e.target.value)
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3"
-                >
-
-                  {years.map((year) => (
-                    <option
-                      key={year}
-                      value={year}
-                    >
-                      {year}
-                    </option>
-                  ))}
-
-                </select>
-
-              </div>
-
-            </div>
-
-          )}
-
-          {/* ==============================
-              รายปี
-          ============================== */}
-          {periodType === "yearly" && (
-
-            <div className="md:w-1/3">
-
-              <label className="mb-2 block text-sm font-medium text-gray-700">
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
                 ปี
               </label>
 
               <select
                 value={selectedYear}
                 onChange={(e) =>
-                  setSelectedYear(
-                    Number(e.target.value)
-                  )
+                  setSelectedYear(Number(e.target.value))
                 }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               >
-
-                {years.map((year) => (
-                  <option
-                    key={year}
-                    value={year}
-                  >
+                {YEARS.map((year) => (
+                  <option key={year} value={year}>
                     {year}
                   </option>
                 ))}
-
               </select>
-
             </div>
-
-          )}
-
-          {/* แสดงช่วงเวลาที่เลือก */}
-          <div className="mt-5 rounded-xl bg-blue-50 p-4">
-
-            <div className="text-sm text-gray-500">
-              ช่วงเวลาที่เลือก
-            </div>
-
-            <div className="mt-1 text-xl font-bold text-blue-700">
-
-              {periodType === "daily" &&
-                "รายวัน "}
-
-              {periodType === "monthly" &&
-                "รายเดือน "}
-
-              {periodType === "yearly" &&
-                "รายปี "}
-
-              {periodData.periodLabel}
-
-            </div>
-
           </div>
 
-        </div>
+          {/* Preview */}
+          <div className="mt-6 flex items-center justify-between rounded-2xl bg-gradient-to-r from-blue-50 to-cyan-50 px-5 py-4">
+            <div>
+              <div className="text-xs font-medium text-slate-500">
+                ช่วงเวลาที่เลือก
+              </div>
 
-        {/* ข้อมูลพลังงาน */}
-        <div className="mb-6 rounded-2xl bg-white p-6 shadow">
+              <div className="mt-1 text-base font-bold text-blue-700">
+                {getSelectedPeriodText()}
+              </div>
+            </div>
 
-          <h2 className="mb-5 text-xl font-semibold text-gray-800">
-            ข้อมูลการใช้พลังงาน
-          </h2>
+            <div className="text-3xl">📅</div>
+          </div>
+        </section>
+
+        {/* Energy Data */}
+        <section className="mt-6">
+          <div className="mb-4 flex items-end justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                ข้อมูลการใช้พลังงาน
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                กรอกค่าการใช้พลังงานของแต่ละประเภท
+              </p>
+            </div>
+
+            <div className="text-sm text-slate-400">
+              {energyTypes.length} รายการ
+            </div>
+          </div>
 
           {loading ? (
-
-            <div className="py-10 text-center text-gray-500">
-              กำลังโหลดข้อมูล...
+            <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+              <p className="text-sm text-slate-500">
+                กำลังโหลดข้อมูล...
+              </p>
             </div>
-
           ) : energyTypes.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+              <div className="text-4xl">⚡</div>
 
-            <div className="rounded-xl bg-yellow-50 p-5 text-yellow-800">
-              ยังไม่มีประเภทพลังงาน
+              <h3 className="mt-4 font-bold text-slate-800">
+                ยังไม่มีประเภทพลังงาน
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                กรุณาเพิ่มประเภทพลังงานก่อนเริ่มบันทึกข้อมูล
+              </p>
             </div>
-
           ) : (
-
             <div className="grid gap-4 md:grid-cols-2">
-
-              {energyTypes.map(
-                (energy) => (
-
-                  <div
-                    key={energy.id}
-                    className="rounded-xl border border-gray-200 p-4"
-                  >
-
-                    <label className="mb-2 block font-medium text-gray-800">
-                      {energy.energy_name}
-                    </label>
-
+              {energyTypes.map((energy, index) => (
+                <div
+                  key={energy.id}
+                  className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-lg">
+                        {index % 4 === 0
+                          ? "⚡"
+                          : index % 4 === 1
+                          ? "🔥"
+                          : index % 4 === 2
+                          ? "💧"
+                          : "🏭"}
+                      </div>
 
-                      <input
-                        type="number"
-                        step="any"
-                        value={
-                          values[
-                            energy.id
-                          ] || ""
-                        }
-                        onChange={(e) =>
-                          handleValueChange(
-                            energy.id,
-                            e.target.value
-                          )
-                        }
-                        placeholder="กรอกค่า"
-                        className="w-full rounded-xl border border-gray-300 px-4 py-3"
-                      />
+                      <div>
+                        <div className="font-bold text-slate-800">
+                          {energy.energy_name}
+                        </div>
 
-                      <span className="min-w-[60px] text-sm text-gray-500">
-                        {energy.unit}
-                      </span>
-
+                        <div className="text-xs text-slate-400">
+                          {energy.energy_key || "Energy"}
+                        </div>
+                      </div>
                     </div>
 
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+                      {energy.unit}
+                    </span>
                   </div>
 
-                )
-              )}
+                  <div className="relative mt-5">
+                    <input
+                      type="number"
+                      step="any"
+                      value={values[energy.id] || ""}
+                      onChange={(e) =>
+                        handleValueChange(
+                          energy.id,
+                          e.target.value
+                        )
+                      }
+                      placeholder="0.00"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 pr-20 text-xl font-bold text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    />
 
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
+                      {energy.unit}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-
           )}
+        </section>
 
-        </div>
-
-        {/* หมายเหตุ */}
-        <div className="mb-6 rounded-2xl bg-white p-6 shadow">
-
-          <label className="mb-2 block text-lg font-semibold text-gray-800">
+        {/* Note */}
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900">
             หมายเหตุ
-          </label>
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            เพิ่มรายละเอียดเพิ่มเติมของข้อมูลชุดนี้ได้
+          </p>
 
           <textarea
             value={note}
-            onChange={(e) =>
-              setNote(e.target.value)
-            }
+            onChange={(e) => setNote(e.target.value)}
             rows={4}
-            placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3"
+            placeholder="เช่น มีการหยุดเครื่องจักรบางส่วน หรือมีเหตุการณ์ผิดปกติ..."
+            className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
           />
+        </section>
 
-        </div>
-
-        {/* แจ้งเตือน */}
+        {/* Message */}
         {message && (
-
           <div
-            className={`mb-5 rounded-xl p-4 ${
+            className={`mt-6 rounded-2xl px-5 py-4 text-sm font-medium ${
               message.includes("เรียบร้อย")
-                ? "bg-green-50 text-green-700"
+                ? "bg-emerald-50 text-emerald-700"
                 : "bg-red-50 text-red-700"
             }`}
           >
             {message}
           </div>
-
         )}
 
-        {/* บันทึก */}
-        <button
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="w-full rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
-        >
-          {saving
-            ? "กำลังบันทึก..."
-            : "บันทึกข้อมูล"}
-        </button>
+        {/* Save */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || loading}
+            className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-4 text-base font-bold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {saving ? "กำลังบันทึก..." : "💾 บันทึกข้อมูลพลังงาน"}
+          </button>
+        </div>
 
-      </div>
-
+        <div className="h-8" />
+      </main>
     </div>
   );
 }
