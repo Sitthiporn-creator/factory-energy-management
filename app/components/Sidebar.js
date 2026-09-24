@@ -8,15 +8,15 @@ function Icon({ type }) {
     home: (
       <svg viewBox="0 0 24 24" fill="none">
         <path
-          d="M3 10.8L12 3l9 7.8v8.7a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5v-8.7Z"
+          d="M3 10.5L12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5v-9Z"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
         <path
           d="M9 21v-6h6v6"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
       </svg>
@@ -31,12 +31,12 @@ function Icon({ type }) {
           height="18"
           rx="2"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
         />
         <path
-          d="M8 8h8M8 12h8M8 16h4"
+          d="M8 8h8M8 12h8M8 16h5"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
         />
       </svg>
@@ -45,28 +45,18 @@ function Icon({ type }) {
     chart: (
       <svg viewBox="0 0 24 24" fill="none">
         <path
-          d="M4 19V5"
+          d="M4 19V5M4 19h17"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
         />
         <path
-          d="M4 19h17"
+          d="m7 15 4-4 3 2 5-6"
           stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M7 15l4-4 3 2 5-6"
-          stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <circle cx="7" cy="15" r="1" fill="currentColor" />
-        <circle cx="11" cy="11" r="1" fill="currentColor" />
-        <circle cx="14" cy="13" r="1" fill="currentColor" />
-        <circle cx="19" cy="7" r="1" fill="currentColor" />
       </svg>
     ),
 
@@ -75,19 +65,19 @@ function Icon({ type }) {
         <path
           d="M6 3h9l4 4v14H6V3Z"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
         <path
           d="M14 3v5h5"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
         <path
           d="M9 12h6M9 16h6"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
         />
       </svg>
@@ -98,13 +88,13 @@ function Icon({ type }) {
         <path
           d="M9 18h6M10 21h4"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
         />
         <path
           d="M8.2 14.8C6.8 13.7 6 12 6 10a6 6 0 1 1 12 0c0 2-.8 3.7-2.2 4.8-.7.6-1.1 1.3-1.1 2.2h-5.4c0-.9-.4-1.6-1.1-2.2Z"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinejoin="round"
         />
       </svg>
@@ -112,15 +102,17 @@ function Icon({ type }) {
 
     settings: (
       <svg viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
         />
         <path
           d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.6V20a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H6v-2.6h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V5h2.6v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v2.6h-.2a1.7 1.7 0 0 0-1.6 1Z"
           stroke="currentColor"
-          strokeWidth="1.4"
+          strokeWidth="1.6"
           strokeLinejoin="round"
         />
       </svg>
@@ -169,25 +161,15 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
 
-      {/* =========================
-          BRAND
-      ========================= */}
+      {/* LOGO */}
 
       <div className="brand">
 
         <div className="brand-logo">
-          <svg viewBox="0 0 40 40" fill="none">
-            <path
-              d="M22.5 3 9 22h9l-1.5 15L31 17h-9l.5-14Z"
-              fill="white"
-              stroke="white"
-              strokeWidth="1"
-              strokeLinejoin="round"
-            />
-          </svg>
+          ⚡
         </div>
 
-        <div className="brand-text">
+        <div className="brand-content">
           <div className="brand-title">
             Factory Energy
           </div>
@@ -199,34 +181,32 @@ export default function Sidebar() {
 
       </div>
 
-      {/* =========================
-          MENU
-      ========================= */}
+      {/* MENU */}
 
-      <nav className="sidebar-menu">
+      <nav className="menu">
 
-        {menus.map((menu) => {
+        {menus.map((item) => {
 
           const active =
-            menu.href === "/"
+            item.href === "/"
               ? pathname === "/"
-              : pathname.startsWith(menu.href);
+              : pathname.startsWith(item.href);
 
           return (
             <Link
-              key={menu.href}
-              href={menu.href}
-              className={`sidebar-item ${
+              key={item.href}
+              href={item.href}
+              className={`menu-item ${
                 active ? "active" : ""
               }`}
             >
 
-              <span className="sidebar-icon">
-                <Icon type={menu.icon} />
+              <span className="icon">
+                <Icon type={item.icon} />
               </span>
 
-              <span className="sidebar-text">
-                {menu.name}
+              <span className="text">
+                {item.name}
               </span>
 
             </Link>
@@ -235,57 +215,27 @@ export default function Sidebar() {
 
       </nav>
 
-      {/* =========================
-          BOTTOM
-      ========================= */}
+      {/* BOTTOM */}
 
-      <div className="sidebar-bottom">
+      <div className="bottom">
 
-        <div className="factory-icon">
-          <svg viewBox="0 0 40 40" fill="none">
-            <path
-              d="M5 34h30"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-
-            <path
-              d="M8 34V17l9 4v-8l9 4v17"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-
-            <path
-              d="M29 34V10h5v24"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-
-            <path
-              d="M12 27h2M19 27h2M26 27h2"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+        <div className="bottom-icon">
+          🏭
         </div>
 
-        <div className="factory-name">
-          โรงงานตัวอย่าง
-        </div>
+        <div>
+          <div className="bottom-title">
+            โรงงานตัวอย่าง
+          </div>
 
-        <div className="factory-description">
-          ระบบจัดการพลังงานภายในโรงงาน
+          <div className="bottom-text">
+            ระบบจัดการพลังงานภายในโรงงาน
+          </div>
         </div>
 
       </div>
 
       <style jsx>{`
-
-        * {
-          box-sizing: border-box;
-        }
 
         /* =========================
            SIDEBAR
@@ -294,30 +244,28 @@ export default function Sidebar() {
         .sidebar {
           position: fixed;
 
-          left: 0;
           top: 0;
+          left: 0;
           bottom: 0;
 
-          width: 208px;
+          width: 250px;
 
-          background:
-            linear-gradient(
-              180deg,
-              #14233f 0%,
-              #101d34 100%
-            );
+          background: #14233f;
 
-          color: #ffffff;
+          color: white;
+
+          padding: 18px 12px;
 
           display: flex;
+
           flex-direction: column;
 
-          padding: 17px 10px;
-
-          border-right: 1px solid
-            rgba(255,255,255,0.05);
+          box-sizing: border-box;
 
           z-index: 1000;
+
+          border-right: 1px solid
+            rgba(255,255,255,0.06);
         }
 
 
@@ -330,19 +278,29 @@ export default function Sidebar() {
 
           align-items: center;
 
-          gap: 10px;
+          gap: 11px;
 
-          padding:
-            2px 8px 19px;
+          height: 52px;
+
+          padding: 0 8px;
+
+          margin-bottom: 20px;
         }
 
         .brand-logo {
-          width: 35px;
-          height: 35px;
+          width: 40px;
+
+          height: 40px;
 
           flex-shrink: 0;
 
-          border-radius: 9px;
+          border-radius: 10px;
+
+          display: flex;
+
+          align-items: center;
+
+          justify-content: center;
 
           background:
             linear-gradient(
@@ -351,43 +309,39 @@ export default function Sidebar() {
               #2563eb
             );
 
-          display: flex;
-
-          align-items: center;
-          justify-content: center;
+          font-size: 23px;
 
           box-shadow:
             0 5px 15px
             rgba(37,99,235,0.35);
         }
 
-        .brand-logo svg {
-          width: 25px;
-          height: 25px;
-        }
+        .brand-content {
+          display: flex;
 
-        .brand-text {
+          flex-direction: column;
+
+          justify-content: center;
+
           min-width: 0;
         }
 
         .brand-title {
-          font-size: 15px;
+          font-size: 16px;
 
           font-weight: 700;
 
-          line-height: 18px;
+          line-height: 20px;
 
           white-space: nowrap;
         }
 
         .brand-subtitle {
-          margin-top: 2px;
+          color: #91a1ba;
 
-          color: #94a3b8;
+          font-size: 10px;
 
-          font-size: 9px;
-
-          line-height: 12px;
+          line-height: 14px;
 
           white-space: nowrap;
         }
@@ -397,61 +351,61 @@ export default function Sidebar() {
            MENU
         ========================= */
 
-        .sidebar-menu {
+        .menu {
           display: flex;
 
           flex-direction: column;
 
-          gap: 3px;
+          gap: 5px;
 
-          margin-top: 9px;
+          width: 100%;
         }
 
-        .sidebar-item {
+
+        /* =========================
+           MENU ITEM
+        ========================= */
+
+        .menu-item {
           width: 100%;
 
-          height: 40px;
+          height: 46px;
 
           display: flex;
 
+          flex-direction: row;
+
           align-items: center;
 
-          gap: 10px;
+          justify-content: flex-start;
 
-          padding: 0 12px;
+          gap: 12px;
 
-          border-radius: 8px;
+          padding: 0 14px;
+
+          margin: 0;
+
+          box-sizing: border-box;
+
+          border-radius: 9px;
+
+          color: #bdc9da;
 
           text-decoration: none;
 
-          color: #b9c5d6;
-
-          font-size: 13px;
+          font-size: 15px;
 
           font-weight: 500;
 
           line-height: 1;
 
+          white-space: nowrap;
+
+          overflow: hidden;
+
           transition:
             background 0.15s ease,
             color 0.15s ease;
-        }
-
-        .sidebar-item:hover {
-          background:
-            rgba(255,255,255,0.07);
-
-          color: #ffffff;
-        }
-
-        .sidebar-item.active {
-          background: #2874e8;
-
-          color: #ffffff;
-
-          box-shadow:
-            0 5px 14px
-            rgba(37,99,235,0.25);
         }
 
 
@@ -459,23 +413,26 @@ export default function Sidebar() {
            ICON
         ========================= */
 
-        .sidebar-icon {
-          width: 19px;
-          height: 19px;
+        .icon {
+          width: 22px;
 
-          flex-shrink: 0;
+          height: 22px;
+
+          flex: 0 0 22px;
 
           display: flex;
 
           align-items: center;
+
           justify-content: center;
 
           color: currentColor;
         }
 
-        .sidebar-icon :global(svg) {
-          width: 18px;
-          height: 18px;
+        .icon :global(svg) {
+          width: 21px;
+
+          height: 21px;
 
           display: block;
         }
@@ -485,8 +442,18 @@ export default function Sidebar() {
            TEXT
         ========================= */
 
-        .sidebar-text {
+        .text {
+          flex: 1;
+
+          min-width: 0;
+
           display: block;
+
+          font-size: 15px;
+
+          font-weight: 500;
+
+          line-height: 46px;
 
           white-space: nowrap;
 
@@ -494,11 +461,39 @@ export default function Sidebar() {
 
           text-overflow: ellipsis;
 
-          font-size: 13px;
-
-          line-height: 1.2;
-
           color: inherit;
+        }
+
+
+        /* =========================
+           HOVER
+        ========================= */
+
+        .menu-item:hover {
+          background: #1e3358;
+
+          color: #ffffff;
+        }
+
+
+        /* =========================
+           ACTIVE
+        ========================= */
+
+        .menu-item.active {
+          background: #2878ed;
+
+          color: #ffffff;
+
+          font-weight: 600;
+
+          box-shadow:
+            0 5px 14px
+            rgba(37,99,235,0.25);
+        }
+
+        .menu-item.active .text {
+          font-weight: 600;
         }
 
 
@@ -506,65 +501,62 @@ export default function Sidebar() {
            BOTTOM
         ========================= */
 
-        .sidebar-bottom {
+        .bottom {
           margin-top: auto;
 
-          padding:
-            15px 10px 4px;
+          padding: 14px 9px 4px;
 
           border-top:
             1px solid
-            rgba(255,255,255,0.06);
+            rgba(255,255,255,0.07);
+
+          display: flex;
+
+          align-items: center;
+
+          gap: 9px;
         }
 
-        .factory-icon {
-          width: 34px;
-          height: 34px;
+        .bottom-icon {
+          width: 35px;
 
-          color: #8fa4c4;
+          height: 35px;
 
-          margin-bottom: 6px;
+          display: flex;
+
+          align-items: center;
+
+          justify-content: center;
+
+          font-size: 22px;
+
+          flex-shrink: 0;
         }
 
-        .factory-icon svg {
-          width: 34px;
-          height: 34px;
-        }
-
-        .factory-name {
-          color: #ffffff;
-
-          font-size: 11px;
+        .bottom-title {
+          font-size: 12px;
 
           font-weight: 600;
 
-          line-height: 15px;
+          color: #ffffff;
+
+          line-height: 16px;
         }
 
-        .factory-description {
-          color: #64748b;
+        .bottom-text {
+          font-size: 9px;
 
-          font-size: 8px;
+          color: #71809a;
 
           line-height: 13px;
-
-          margin-top: 2px;
 
           white-space: nowrap;
         }
 
 
         /* =========================
-           RESPONSIVE
+           MOBILE
         ========================= */
-
-        @media (max-width: 900px) {
-
-          .sidebar {
-            width: 208px;
-          }
-
-        }
 
         @media (max-width: 700px) {
 
@@ -576,15 +568,9 @@ export default function Sidebar() {
             height: auto;
 
             min-height: auto;
-
-            padding: 15px;
           }
 
-          .sidebar-menu {
-            overflow: visible;
-          }
-
-          .sidebar-bottom {
+          .bottom {
             display: none;
           }
 
