@@ -17,7 +17,6 @@ function Icon({ type }) {
           d="M9 21v-6h6v6"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinejoin="round"
         />
       </svg>
     ),
@@ -72,7 +71,6 @@ function Icon({ type }) {
           d="M14 3v5h5"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinejoin="round"
         />
         <path
           d="M9 12h6M9 16h6"
@@ -95,7 +93,6 @@ function Icon({ type }) {
           d="M8.2 14.8C6.8 13.7 6 12 6 10a6 6 0 1 1 12 0c0 2-.8 3.7-2.2 4.8-.7.6-1.1 1.3-1.1 2.2h-5.4c0-.9-.4-1.6-1.1-2.2Z"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinejoin="round"
         />
       </svg>
     ),
@@ -113,7 +110,6 @@ function Icon({ type }) {
           d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.6V20a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H6v-2.6h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V5h2.6v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v2.6h-.2a1.7 1.7 0 0 0-1.6 1Z"
           stroke="currentColor"
           strokeWidth="1.6"
-          strokeLinejoin="round"
         />
       </svg>
     ),
@@ -159,34 +155,29 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className="fes-sidebar">
 
       {/* LOGO */}
-
-      <div className="brand">
-
-        <div className="brand-logo">
+      <div className="fes-brand">
+        <div className="fes-brand-logo">
           ⚡
         </div>
 
-        <div className="brand-content">
-          <div className="brand-title">
+        <div className="fes-brand-info">
+          <div className="fes-brand-title">
             Factory Energy
           </div>
 
-          <div className="brand-subtitle">
+          <div className="fes-brand-subtitle">
             Management System
           </div>
         </div>
-
       </div>
 
       {/* MENU */}
-
-      <nav className="menu">
+      <nav className="fes-menu">
 
         {menus.map((item) => {
-
           const active =
             item.href === "/"
               ? pathname === "/"
@@ -196,39 +187,36 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`menu-item ${
-                active ? "active" : ""
+              className={`fes-menu-item ${
+                active ? "fes-active" : ""
               }`}
             >
-
-              <span className="icon">
+              <span className="fes-icon">
                 <Icon type={item.icon} />
               </span>
 
-              <span className="text">
+              <span className="fes-text">
                 {item.name}
               </span>
-
             </Link>
           );
         })}
 
       </nav>
 
-      {/* BOTTOM */}
+      {/* FOOTER */}
+      <div className="fes-footer">
 
-      <div className="bottom">
-
-        <div className="bottom-icon">
+        <div className="fes-footer-icon">
           🏭
         </div>
 
         <div>
-          <div className="bottom-title">
+          <div className="fes-footer-title">
             โรงงานตัวอย่าง
           </div>
 
-          <div className="bottom-text">
+          <div className="fes-footer-text">
             ระบบจัดการพลังงานภายในโรงงาน
           </div>
         </div>
@@ -237,35 +225,31 @@ export default function Sidebar() {
 
       <style jsx>{`
 
-        /* =========================
-           SIDEBAR
-        ========================= */
+        .fes-sidebar {
+          position: fixed !important;
 
-        .sidebar {
-          position: fixed;
+          top: 0 !important;
+          left: 0 !important;
+          bottom: 0 !important;
 
-          top: 0;
-          left: 0;
-          bottom: 0;
+          width: 250px !important;
 
-          width: 250px;
+          background: #14233f !important;
 
-          background: #14233f;
+          color: #ffffff !important;
 
-          color: white;
+          padding: 18px 12px !important;
 
-          padding: 18px 12px;
+          box-sizing: border-box !important;
 
-          display: flex;
+          display: flex !important;
 
-          flex-direction: column;
+          flex-direction: column !important;
 
-          box-sizing: border-box;
-
-          z-index: 1000;
+          z-index: 9999 !important;
 
           border-right: 1px solid
-            rgba(255,255,255,0.06);
+            rgba(255,255,255,0.06) !important;
         }
 
 
@@ -273,77 +257,80 @@ export default function Sidebar() {
            BRAND
         ========================= */
 
-        .brand {
-          display: flex;
+        .fes-brand {
+          width: 100% !important;
 
-          align-items: center;
+          height: 55px !important;
 
-          gap: 11px;
+          display: flex !important;
 
-          height: 52px;
+          flex-direction: row !important;
 
-          padding: 0 8px;
+          align-items: center !important;
 
-          margin-bottom: 20px;
+          justify-content: flex-start !important;
+
+          gap: 11px !important;
+
+          padding: 0 8px !important;
+
+          margin-bottom: 20px !important;
+
+          box-sizing: border-box !important;
         }
 
-        .brand-logo {
-          width: 40px;
+        .fes-brand-logo {
+          width: 40px !important;
 
-          height: 40px;
+          height: 40px !important;
 
-          flex-shrink: 0;
+          min-width: 40px !important;
 
-          border-radius: 10px;
+          display: flex !important;
 
-          display: flex;
+          align-items: center !important;
 
-          align-items: center;
+          justify-content: center !important;
 
-          justify-content: center;
+          background: #2878ed !important;
 
-          background:
-            linear-gradient(
-              135deg,
-              #3b82f6,
-              #2563eb
-            );
+          border-radius: 10px !important;
 
-          font-size: 23px;
+          font-size: 23px !important;
 
-          box-shadow:
-            0 5px 15px
-            rgba(37,99,235,0.35);
+          flex-shrink: 0 !important;
         }
 
-        .brand-content {
-          display: flex;
+        .fes-brand-info {
+          display: flex !important;
 
-          flex-direction: column;
+          flex-direction: column !important;
 
-          justify-content: center;
+          align-items: flex-start !important;
 
-          min-width: 0;
+          justify-content: center !important;
+
+          min-width: 0 !important;
         }
 
-        .brand-title {
-          font-size: 16px;
+        .fes-brand-title {
+          font-size: 16px !important;
 
-          font-weight: 700;
+          font-weight: 700 !important;
 
-          line-height: 20px;
+          line-height: 20px !important;
 
-          white-space: nowrap;
+          white-space: nowrap !important;
         }
 
-        .brand-subtitle {
-          color: #91a1ba;
+        .fes-brand-subtitle {
+          font-size: 10px !important;
 
-          font-size: 10px;
+          color: #91a1ba !important;
 
-          line-height: 14px;
+          line-height: 14px !important;
 
-          white-space: nowrap;
+          white-space: nowrap !important;
         }
 
 
@@ -351,14 +338,18 @@ export default function Sidebar() {
            MENU
         ========================= */
 
-        .menu {
-          display: flex;
+        .fes-menu {
+          width: 100% !important;
 
-          flex-direction: column;
+          display: flex !important;
 
-          gap: 5px;
+          flex-direction: column !important;
 
-          width: 100%;
+          gap: 5px !important;
+
+          margin: 0 !important;
+
+          padding: 0 !important;
         }
 
 
@@ -366,46 +357,62 @@ export default function Sidebar() {
            MENU ITEM
         ========================= */
 
-        .menu-item {
-          width: 100%;
+        .fes-menu-item {
+          width: 100% !important;
 
-          height: 46px;
+          height: 46px !important;
 
-          display: flex;
+          min-height: 46px !important;
 
-          flex-direction: row;
+          display: flex !important;
 
-          align-items: center;
+          flex-direction: row !important;
 
-          justify-content: flex-start;
+          align-items: center !important;
 
-          gap: 12px;
+          justify-content: flex-start !important;
 
-          padding: 0 14px;
+          gap: 12px !important;
 
-          margin: 0;
+          padding: 0 14px !important;
 
-          box-sizing: border-box;
+          margin: 0 !important;
 
-          border-radius: 9px;
+          box-sizing: border-box !important;
 
-          color: #bdc9da;
+          border-radius: 9px !important;
 
-          text-decoration: none;
+          background: transparent !important;
 
-          font-size: 15px;
+          color: #bdc9da !important;
 
-          font-weight: 500;
+          text-decoration: none !important;
 
-          line-height: 1;
+          font-size: 15px !important;
 
-          white-space: nowrap;
+          font-weight: 500 !important;
 
-          overflow: hidden;
+          line-height: normal !important;
 
-          transition:
-            background 0.15s ease,
-            color 0.15s ease;
+          white-space: nowrap !important;
+
+          overflow: hidden !important;
+        }
+
+
+        .fes-menu-item:hover {
+          background: #1e3358 !important;
+
+          color: #ffffff !important;
+        }
+
+
+        .fes-menu-item.fes-active {
+          background: #2878ed !important;
+
+          color: #ffffff !important;
+
+          font-weight: 600 !important;
         }
 
 
@@ -413,28 +420,34 @@ export default function Sidebar() {
            ICON
         ========================= */
 
-        .icon {
-          width: 22px;
+        .fes-icon {
+          width: 22px !important;
 
-          height: 22px;
+          height: 22px !important;
 
-          flex: 0 0 22px;
+          min-width: 22px !important;
 
-          display: flex;
+          max-width: 22px !important;
 
-          align-items: center;
+          display: flex !important;
 
-          justify-content: center;
+          flex-direction: row !important;
 
-          color: currentColor;
+          align-items: center !important;
+
+          justify-content: center !important;
+
+          flex-shrink: 0 !important;
+
+          color: currentColor !important;
         }
 
-        .icon :global(svg) {
-          width: 21px;
+        .fes-icon :global(svg) {
+          width: 20px !important;
 
-          height: 21px;
+          height: 20px !important;
 
-          display: block;
+          display: block !important;
         }
 
 
@@ -442,115 +455,92 @@ export default function Sidebar() {
            TEXT
         ========================= */
 
-        .text {
-          flex: 1;
+        .fes-text {
+          display: block !important;
 
-          min-width: 0;
+          width: auto !important;
 
-          display: block;
+          height: auto !important;
 
-          font-size: 15px;
+          flex: 1 1 auto !important;
 
-          font-weight: 500;
+          min-width: 0 !important;
 
-          line-height: 46px;
+          margin: 0 !important;
 
-          white-space: nowrap;
+          padding: 0 !important;
 
-          overflow: hidden;
+          color: inherit !important;
 
-          text-overflow: ellipsis;
+          font-size: 15px !important;
 
-          color: inherit;
+          font-weight: inherit !important;
+
+          line-height: normal !important;
+
+          text-align: left !important;
+
+          white-space: nowrap !important;
+
+          overflow: hidden !important;
+
+          text-overflow: ellipsis !important;
+
+          text-decoration: none !important;
         }
 
 
         /* =========================
-           HOVER
+           FOOTER
         ========================= */
 
-        .menu-item:hover {
-          background: #1e3358;
+        .fes-footer {
+          margin-top: auto !important;
 
-          color: #ffffff;
+          padding: 15px 9px 4px !important;
+
+          border-top: 1px solid
+            rgba(255,255,255,0.07) !important;
+
+          display: flex !important;
+
+          flex-direction: row !important;
+
+          align-items: center !important;
+
+          gap: 9px !important;
         }
 
+        .fes-footer-icon {
+          width: 34px !important;
 
-        /* =========================
-           ACTIVE
-        ========================= */
+          height: 34px !important;
 
-        .menu-item.active {
-          background: #2878ed;
+          display: flex !important;
 
-          color: #ffffff;
+          align-items: center !important;
 
-          font-weight: 600;
+          justify-content: center !important;
 
-          box-shadow:
-            0 5px 14px
-            rgba(37,99,235,0.25);
+          font-size: 22px !important;
+
+          flex-shrink: 0 !important;
         }
 
-        .menu-item.active .text {
-          font-weight: 600;
+        .fes-footer-title {
+          color: #ffffff !important;
+
+          font-size: 12px !important;
+
+          font-weight: 600 !important;
         }
 
+        .fes-footer-text {
+          color: #71809a !important;
 
-        /* =========================
-           BOTTOM
-        ========================= */
+          font-size: 9px !important;
 
-        .bottom {
-          margin-top: auto;
-
-          padding: 14px 9px 4px;
-
-          border-top:
-            1px solid
-            rgba(255,255,255,0.07);
-
-          display: flex;
-
-          align-items: center;
-
-          gap: 9px;
-        }
-
-        .bottom-icon {
-          width: 35px;
-
-          height: 35px;
-
-          display: flex;
-
-          align-items: center;
-
-          justify-content: center;
-
-          font-size: 22px;
-
-          flex-shrink: 0;
-        }
-
-        .bottom-title {
-          font-size: 12px;
-
-          font-weight: 600;
-
-          color: #ffffff;
-
-          line-height: 16px;
-        }
-
-        .bottom-text {
-          font-size: 9px;
-
-          color: #71809a;
-
-          line-height: 13px;
-
-          white-space: nowrap;
+          margin-top: 2px !important;
         }
 
 
@@ -559,21 +549,19 @@ export default function Sidebar() {
         ========================= */
 
         @media (max-width: 700px) {
+          .fes-sidebar {
+            position: relative !important;
 
-          .sidebar {
-            position: relative;
+            width: 100% !important;
 
-            width: 100%;
+            height: auto !important;
 
-            height: auto;
-
-            min-height: auto;
+            min-height: auto !important;
           }
 
-          .bottom {
-            display: none;
+          .fes-footer {
+            display: none !important;
           }
-
         }
 
       `}</style>
