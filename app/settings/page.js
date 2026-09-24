@@ -13,11 +13,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+  // ฟอร์มเพิ่มหัวข้อ
+  const [newName, setNewName] = useState("");
+  const [newUnit, setNewUnit] = useState("");
+
   useEffect(() => {
     loadEnergyTypes();
   }, []);
 
+  // โหลดหัวข้อทั้งหมด
   async function loadEnergyTypes() {
+    setLoading(true);
+
     const { data, error } = await supabase
       .from("energy_types")
       .select("*")
@@ -33,6 +40,7 @@ export default function SettingsPage() {
     setLoading(false);
   }
 
+  // เปลี่ยนค่าหัวข้อ
   function changeValue(id, field, value) {
     setEnergyTypes((current) =>
       current.map((item) =>
@@ -43,6 +51,7 @@ export default function SettingsPage() {
     );
   }
 
+  // บันทึกหัวข้อเดิม
   async function saveItem(item) {
     setMessage("กำลังบันทึก...");
 
@@ -60,7 +69,61 @@ export default function SettingsPage() {
       return;
     }
 
-    setMessage("✅ บันทึกข้อมูลสำเร็จ");
+    setMessage("✅ บันทึกหัวข้อสำเร็จ");
+
+    // โหลดข้อมูลใหม่
+    await loadEnergyTypes();
+  }
+
+  // สร้าง energy_key สำหรับหัวข้อใหม่
+  function generateEnergyKey(name) {
+    const random = Math.random()
+      .toString(36)
+      .substring(2, 8);
+
+    return `custom_${Date.now()}_${random}`;
+  }
+
+  // เพิ่มหัวข้อใหม่
+  async function addEnergyType() {
+    if (!newName.trim()) {
+      setMessage("⚠️ กรุณากรอกชื่อหัวข้อ");
+      return;
+    }
+
+    if (!newUnit.trim()) {
+      setMessage("⚠️ กรุณากรอกหน่วย");
+      return;
+    }
+
+    setMessage("กำลังเพิ่มหัวข้อ...");
+
+    const energyKey = generateEnergyKey(newName);
+
+    const { error } = await supabase
+      .from("energy_types")
+      .insert([
+        {
+          energy_key: energyKey,
+          energy_name: newName.trim(),
+          unit: newUnit.trim(),
+          is_active: true,
+        },
+      ]);
+
+    if (error) {
+      setMessage("❌ เพิ่มหัวข้อไม่สำเร็จ: " + error.message);
+      return;
+    }
+
+    setMessage("✅ เพิ่มหัวข้อสำเร็จ");
+
+    // ล้างช่องกรอก
+    setNewName("");
+    setNewUnit("");
+
+    // โหลดรายการใหม่
+    await loadEnergyTypes();
   }
 
   if (loading) {
@@ -78,6 +141,8 @@ export default function SettingsPage() {
     <main style={pageStyle}>
       <div style={{ maxWidth: "1000px", margin: "auto" }}>
         <div style={cardStyle}>
+
+          {/* หัวหน้า */}
           <div
             style={{
               display: "flex",
@@ -93,7 +158,7 @@ export default function SettingsPage() {
               </h1>
 
               <p style={{ color: "#666" }}>
-                เปลี่ยนชื่อและหน่วยของข้อมูลพลังงานได้จากหน้านี้
+                จัดการชื่อหัวข้อ หน่วย และเพิ่มหัวข้อใหม่
               </p>
             </div>
 
@@ -111,7 +176,77 @@ export default function SettingsPage() {
             </a>
           </div>
 
-          <div style={{ marginTop: "25px" }}>
+          {/* เพิ่มหัวข้อ */}
+          <div
+            style={{
+              marginTop: "30px",
+              padding: "20px",
+              borderRadius: "12px",
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>
+              ➕ เพิ่มหัวข้อ
+            </h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "1fr 1fr auto",
+                gap: "15px",
+                alignItems: "end",
+              }}
+            >
+              <div>
+                <label style={labelStyle}>
+                  ชื่อหัวข้อ
+                </label>
+
+                <input
+                  value={newName}
+                  onChange={(e) =>
+                    setNewName(e.target.value)
+                  }
+                  placeholder="เช่น พลังงานลม"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>
+                  หน่วย
+                </label>
+
+                <input
+                  value={newUnit}
+                  onChange={(e) =>
+                    setNewUnit(e.target.value)
+                  }
+                  placeholder="เช่น kWh"
+                  style={inputStyle}
+                />
+              </div>
+
+              <button
+                onClick={addEnergyType}
+                style={{
+                  ...buttonStyle,
+                  background: "#16a34a",
+                  height: "46px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ➕ เพิ่มหัวข้อ
+              </button>
+            </div>
+          </div>
+
+          {/* รายการหัวข้อ */}
+          <div style={{ marginTop: "30px" }}>
+            <h2>📋 รายการหัวข้อ</h2>
+
             {energyTypes.map((item) => (
               <div
                 key={item.id}
@@ -132,9 +267,11 @@ export default function SettingsPage() {
                     alignItems: "end",
                   }}
                 >
+
+                  {/* ชื่อ */}
                   <div>
                     <label style={labelStyle}>
-                      ชื่อพลังงาน
+                      ชื่อหัวข้อ
                     </label>
 
                     <input
@@ -150,6 +287,7 @@ export default function SettingsPage() {
                     />
                   </div>
 
+                  {/* หน่วย */}
                   <div>
                     <label style={labelStyle}>
                       หน่วย
@@ -168,12 +306,14 @@ export default function SettingsPage() {
                     />
                   </div>
 
+                  {/* เปิดใช้งาน */}
                   <label
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
                       paddingBottom: "12px",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     <input
@@ -191,8 +331,11 @@ export default function SettingsPage() {
                     ใช้งาน
                   </label>
 
+                  {/* บันทึก */}
                   <button
-                    onClick={() => saveItem(item)}
+                    onClick={() =>
+                      saveItem(item)
+                    }
                     style={buttonStyle}
                   >
                     💾 บันทึก
@@ -212,6 +355,7 @@ export default function SettingsPage() {
             ))}
           </div>
 
+          {/* ข้อความ */}
           {message && (
             <div
               style={{
@@ -225,6 +369,7 @@ export default function SettingsPage() {
               {message}
             </div>
           )}
+
         </div>
       </div>
     </main>
