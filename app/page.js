@@ -20,253 +20,276 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 );
 
-const DEFAULT_ENERGY_TYPES = [
-  {
-    id: "electricity",
-    energy_key: "electricity",
-    energy_name: "ไฟฟ้า",
-    unit: "kWh",
-  },
-  {
-    id: "solar",
-    energy_key: "solar",
-    energy_name: "Solar",
-    unit: "kWh",
-  },
-  {
-    id: "gas",
-    energy_key: "gas",
-    energy_name: "Gas",
-    unit: "Nm³",
-  },
-  {
-    id: "fuel",
-    energy_key: "fuel",
-    energy_name: "น้ำมัน",
-    unit: "ลิตร",
-  },
-  {
-    id: "steam",
-    energy_key: "steam",
-    energy_name: "Steam",
-    unit: "ตัน",
-  },
-  {
-    id: "water",
-    energy_key: "water",
-    energy_name: "น้ำ",
-    unit: "m³",
-  },
-];
-
-const MONTHS = [
-  "ม.ค.",
-  "ก.พ.",
-  "มี.ค.",
-  "เม.ย.",
-  "พ.ค.",
-  "มิ.ย.",
-  "ก.ค.",
-  "ส.ค.",
-  "ก.ย.",
-  "ต.ค.",
-  "พ.ย.",
-  "ธ.ค.",
-];
-
 export default function Dashboard() {
-  const [data, setData] = useState([]);
-  const [energyTypes, setEnergyTypes] = useState(
-    DEFAULT_ENERGY_TYPES
-  );
+  const [energyData, setEnergyData] = useState([]);
+  const [energyTypes, setEnergyTypes] = useState([]);
 
-  const [energyType, setEnergyType] =
-    useState("electricity");
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("daily");
 
-  const [selectedYear, setSelectedYear] =
-    useState("");
-
-  const [chartMode, setChartMode] =
-    useState("monthly");
-
-  const [loading, setLoading] =
-    useState(true);
+  const [selectedEnergy, setSelectedEnergy] = useState("");
 
   useEffect(() => {
     loadData();
-    loadEnergyTypes();
   }, []);
 
   async function loadData() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("energy_data")
-      .select("*")
-      .order("record_date", {
-        ascending: true,
-      });
+    const [dataResult, typeResult] = await Promise.all([
+      supabase
+        .from("energy_data")
+        .select("*")
+        .order("record_date", { ascending: true }),
 
-    if (error) {
-      console.error(error);
-      setLoading(false);
-      return;
+      supabase
+        .from("energy_types")
+        .select("*")
+        .eq("is_active", true)
+        .order("id"),
+    ]);
+
+    if (dataResult.error) {
+      console.error(dataResult.error);
     }
 
-    setData(data || []);
+    if (typeResult.error) {
+      console.error(typeResult.error);
+    }
 
-    if (data && data.length > 0) {
-      const years = data.map((item) =>
-        new Date(
-          item.record_date
-        ).getFullYear()
-      );
+    const types = typeResult.data || [];
 
-      setSelectedYear(
-        String(Math.max(...years))
-      );
+    setEnergyData(dataResult.data || []);
+    setEnergyTypes(types);
+
+    if (types.length > 0) {
+      setSelectedEnergy(types[0].energy_key);
     }
 
     setLoading(false);
   }
 
-  async function loadEnergyTypes() {
-    const { data, error } = await supabase
-      .from("energy_types")
-      .select("*")
-      .eq("is_active", true)
-      .order("id");
+  /*
+   * ดึงค่าพลังงานจาก energy_data
+   *
+   * สำหรับหัวข้อเดิมที่มี column ใน energy_data
+   * เช่น electricity, solar, gas, fuel, steam, water
+   */
+  function getEnergyValue(row, energyKey) {
+    const value = row?.[energyKey];
 
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      setEnergyTypes(data);
-
-      setEnergyType(
-        data[0].energy_key
-      );
-    }
+    return Number(value) || 0;
   }
 
-  const years = useMemo(() => {
-    const yearSet = new Set(
-      data.map((item) =>
-        new Date(
-          item.record_date
-        ).getFullYear()
-      )
-    );
+  /*
+   * จัดรูปแบบวันที่
+   */
+  function formatDate(dateString) {
+    if (!dateString) return "-";
 
-    return Array.from(yearSet).sort(
-      (a, b) => b - a
-    );
-  }, [data]);
+    const date = new Date(dateString);
 
-  const selectedEnergy =
-    energyTypes.find(
-      (item) =>
-        item.energy_key === energyType
-    );
-
-  const monthlyData = useMemo(() => {
-    const result = MONTHS.map(
-      (month) => ({
-        month,
-        value: 0,
-      })
-    );
-
-    data.forEach((item) => {
-      const date = new Date(
-        item.record_date
-      );
-
-      const year =
-        date.getFullYear();
-
-      const month =
-        date.getMonth();
-
-      if (
-        String(year) ===
-        String(selectedYear)
-      ) {
-        result[month].value +=
-          Number(
-            item[energyType]
-          ) || 0;
-      }
+    return date.toLocaleDateString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
+  }
 
-    return result;
-  }, [
-    data,
-    energyType,
-    selectedYear,
-  ]);
+  /*
+   * จัดข้อมูลตามรูปแบบที่เลือก
+   */
+  const chartData = useMemo(() => {
+    if (!energyData.length) return [];
 
-  const yearlyData = useMemo(() => {
+    if (viewMode === "daily") {
+      return energyData.map((row) => {
+        const item = {
+          label: formatDate(row.record_date),
+          date: row.record_date,
+        };
+
+        energyTypes.forEach((type) => {
+          item[type.energy_key] = getEnergyValue(
+            row,
+            type.energy_key
+          );
+        });
+
+        return item;
+      });
+    }
+
+    if (viewMode === "monthly") {
+      const grouped = {};
+
+      energyData.forEach((row) => {
+        if (!row.record_date) return;
+
+        const date = new Date(row.record_date);
+
+        const key =
+          date.getFullYear() +
+          "-" +
+          String(date.getMonth() + 1).padStart(2, "0");
+
+        if (!grouped[key]) {
+          grouped[key] = {
+            label: key,
+            date: key,
+          };
+
+          energyTypes.forEach((type) => {
+            grouped[key][type.energy_key] = 0;
+          });
+        }
+
+        energyTypes.forEach((type) => {
+          grouped[key][type.energy_key] += getEnergyValue(
+            row,
+            type.energy_key
+          );
+        });
+      });
+
+      return Object.values(grouped);
+    }
+
+    if (viewMode === "yearly") {
+      const grouped = {};
+
+      energyData.forEach((row) => {
+        if (!row.record_date) return;
+
+        const date = new Date(row.record_date);
+
+        const key = String(date.getFullYear());
+
+        if (!grouped[key]) {
+          grouped[key] = {
+            label: key,
+            date: key,
+          };
+
+          energyTypes.forEach((type) => {
+            grouped[key][type.energy_key] = 0;
+          });
+        }
+
+        energyTypes.forEach((type) => {
+          grouped[key][type.energy_key] += getEnergyValue(
+            row,
+            type.energy_key
+          );
+        });
+      });
+
+      return Object.values(grouped);
+    }
+
+    return [];
+  }, [energyData, energyTypes, viewMode]);
+
+  /*
+   * ข้อมูลสำหรับตาราง
+   */
+  const tableData = useMemo(() => {
+    if (viewMode === "daily") {
+      return [...energyData].reverse();
+    }
+
     const grouped = {};
 
-    data.forEach((item) => {
-      const year =
-        new Date(
-          item.record_date
-        ).getFullYear();
+    energyData.forEach((row) => {
+      if (!row.record_date) return;
 
-      if (!grouped[year]) {
-        grouped[year] = 0;
+      const date = new Date(row.record_date);
+
+      let key = "";
+
+      if (viewMode === "monthly") {
+        key =
+          date.getFullYear() +
+          "-" +
+          String(date.getMonth() + 1).padStart(2, "0");
       }
 
-      grouped[year] +=
-        Number(
-          item[energyType]
-        ) || 0;
+      if (viewMode === "yearly") {
+        key = String(date.getFullYear());
+      }
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          record_date: key,
+          note: "",
+        };
+
+        energyTypes.forEach((type) => {
+          grouped[key][type.energy_key] = 0;
+        });
+      }
+
+      energyTypes.forEach((type) => {
+        grouped[key][type.energy_key] += getEnergyValue(
+          row,
+          type.energy_key
+        );
+      });
     });
 
-    return Object.keys(grouped)
-      .sort()
-      .map((year) => ({
-        year,
-        value: grouped[year],
-      }));
-  }, [data, energyType]);
+    return Object.values(grouped).reverse();
+  }, [energyData, energyTypes, viewMode]);
+
+  /*
+   * สรุปยอดพลังงาน
+   */
+  const summaryData = useMemo(() => {
+    return energyTypes.map((type) => {
+      let total = 0;
+
+      energyData.forEach((row) => {
+        total += getEnergyValue(row, type.energy_key);
+      });
+
+      return {
+        ...type,
+        total,
+      };
+    });
+  }, [energyData, energyTypes]);
+
+  const selectedEnergyType = energyTypes.find(
+    (type) => type.energy_key === selectedEnergy
+  );
+
+  if (loading) {
+    return (
+      <main style={pageStyle}>
+        <div style={containerStyle}>
+          <div style={cardStyle}>
+            <h1>⚡ Energy Management Dashboard</h1>
+            <p>กำลังโหลดข้อมูล...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f4f7fb",
-        padding: "25px",
-        fontFamily:
-          "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1400px",
-          margin: "auto",
-        }}
-      >
-        {/* HEADER */}
+    <main style={pageStyle}>
+      <div style={containerStyle}>
+
+        {/* Header */}
         <div
           style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "16px",
+            ...cardStyle,
             marginBottom: "20px",
-            boxShadow:
-              "0 2px 10px rgba(0,0,0,0.06)",
           }}
         >
           <div
             style={{
               display: "flex",
-              justifyContent:
-                "space-between",
+              justifyContent: "space-between",
               alignItems: "center",
               gap: "15px",
               flexWrap: "wrap",
@@ -276,10 +299,10 @@ export default function Dashboard() {
               <h1
                 style={{
                   margin: 0,
+                  fontSize: "28px",
                 }}
               >
-                ⚡ Factory Energy
-                Management
+                ⚡ Energy Management Dashboard
               </h1>
 
               <p
@@ -288,12 +311,10 @@ export default function Dashboard() {
                   marginBottom: 0,
                 }}
               >
-                ระบบจัดการและติดตาม
-                การใช้พลังงาน
+                ระบบติดตามและจัดการข้อมูลพลังงานของโรงงาน
               </p>
             </div>
 
-            {/* BUTTONS */}
             <div
               style={{
                 display: "flex",
@@ -304,17 +325,8 @@ export default function Dashboard() {
               <a
                 href="/input"
                 style={{
-                  textDecoration:
-                    "none",
-                  background:
-                    "#2563eb",
-                  color: "white",
-                  padding:
-                    "12px 20px",
-                  borderRadius:
-                    "8px",
-                  fontWeight:
-                    "bold",
+                  ...menuButtonStyle,
+                  background: "#2563eb",
                 }}
               >
                 ➕ เพิ่มข้อมูล
@@ -323,17 +335,8 @@ export default function Dashboard() {
               <a
                 href="/edit"
                 style={{
-                  textDecoration:
-                    "none",
-                  background:
-                    "#f59e0b",
-                  color: "white",
-                  padding:
-                    "12px 20px",
-                  borderRadius:
-                    "8px",
-                  fontWeight:
-                    "bold",
+                  ...menuButtonStyle,
+                  background: "#f59e0b",
                 }}
               >
                 ✏️ แก้ไขข้อมูล
@@ -342,17 +345,8 @@ export default function Dashboard() {
               <a
                 href="/settings"
                 style={{
-                  textDecoration:
-                    "none",
-                  background:
-                    "#64748b",
-                  color: "white",
-                  padding:
-                    "12px 20px",
-                  borderRadius:
-                    "8px",
-                  fontWeight:
-                    "bold",
+                  ...menuButtonStyle,
+                  background: "#64748b",
                 }}
               >
                 ⚙️ ตั้งค่าพลังงาน
@@ -361,233 +355,89 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* SUMMARY */}
+        {/* Summary Cards */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(180px, 1fr))",
+              "repeat(auto-fit, minmax(200px, 1fr))",
             gap: "15px",
             marginBottom: "20px",
           }}
         >
-          {energyTypes.map(
-            (item) => {
-              const total =
-                data.reduce(
-                  (
-                    sum,
-                    row
-                  ) =>
-                    sum +
-                    (Number(
-                      row[
-                        item.energy_key
-                      ]
-                    ) || 0),
-                  0
-                );
+          {summaryData.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                ...cardStyle,
+                padding: "20px",
+              }}
+            >
+              <div
+                style={{
+                  color: "#666",
+                  fontSize: "15px",
+                  marginBottom: "8px",
+                }}
+              >
+                {item.energy_name}
+              </div>
 
-              return (
-                <div
-                  key={
-                    item.energy_key
-                  }
-                  style={{
-                    background:
-                      "white",
-                    padding:
-                      "20px",
-                    borderRadius:
-                      "14px",
-                    boxShadow:
-                      "0 2px 10px rgba(0,0,0,0.05)",
-                  }}
-                >
-                  <div
-                    style={{
-                      color:
-                        "#666",
-                      marginBottom:
-                        "8px",
-                    }}
-                  >
-                    {
-                      item.energy_name
-                    }
-                  </div>
+              <div
+                style={{
+                  fontSize: "26px",
+                  fontWeight: "bold",
+                }}
+              >
+                {item.total.toLocaleString()}
+              </div>
 
-                  <div
-                    style={{
-                      fontSize:
-                        "25px",
-                      fontWeight:
-                        "bold",
-                    }}
-                  >
-                    {total.toLocaleString()}
-                  </div>
-
-                  <div
-                    style={{
-                      color:
-                        "#888",
-                      marginTop:
-                        "5px",
-                    }}
-                  >
-                    {item.unit}
-                  </div>
-                </div>
-              );
-            }
-          )}
+              <div
+                style={{
+                  color: "#888",
+                  fontSize: "14px",
+                  marginTop: "4px",
+                }}
+              >
+                {item.unit}
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* CONTROLS */}
+        {/* Control */}
         <div
           style={{
-            background: "white",
-            padding: "20px",
-            borderRadius: "14px",
+            ...cardStyle,
             marginBottom: "20px",
           }}
         >
           <div
             style={{
               display: "flex",
-              gap: "15px",
+              alignItems: "center",
+              gap: "20px",
               flexWrap: "wrap",
-              alignItems:
-                "center",
             }}
           >
+
+            {/* รูปแบบ */}
             <div>
-              <label
-                style={{
-                  display:
-                    "block",
-                  fontWeight:
-                    "bold",
-                  marginBottom:
-                    "6px",
-                }}
-              >
-                ประเภทพลังงาน
-              </label>
-
-              <select
-                value={energyType}
-                onChange={(e) =>
-                  setEnergyType(
-                    e.target.value
-                  )
-                }
-                style={{
-                  padding:
-                    "10px",
-                  borderRadius:
-                    "8px",
-                  border:
-                    "1px solid #ccc",
-                }}
-              >
-                {energyTypes.map(
-                  (item) => (
-                    <option
-                      key={
-                        item.energy_key
-                      }
-                      value={
-                        item.energy_key
-                      }
-                    >
-                      {
-                        item.energy_name
-                      }
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display:
-                    "block",
-                  fontWeight:
-                    "bold",
-                  marginBottom:
-                    "6px",
-                }}
-              >
-                ปี
-              </label>
-
-              <select
-                value={
-                  selectedYear
-                }
-                onChange={(e) =>
-                  setSelectedYear(
-                    e.target.value
-                  )
-                }
-                style={{
-                  padding:
-                    "10px",
-                  borderRadius:
-                    "8px",
-                  border:
-                    "1px solid #ccc",
-                }}
-              >
-                {years.map(
-                  (year) => (
-                    <option
-                      key={year}
-                      value={year}
-                    >
-                      {year}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display:
-                    "block",
-                  fontWeight:
-                    "bold",
-                  marginBottom:
-                    "6px",
-                }}
-              >
+              <label style={labelStyle}>
                 รูปแบบ
               </label>
 
               <select
-                value={
-                  chartMode
-                }
+                value={viewMode}
                 onChange={(e) =>
-                  setChartMode(
-                    e.target.value
-                  )
+                  setViewMode(e.target.value)
                 }
-                style={{
-                  padding:
-                    "10px",
-                  borderRadius:
-                    "8px",
-                  border:
-                    "1px solid #ccc",
-                }}
+                style={selectStyle}
               >
+                <option value="daily">
+                  รายวัน
+                </option>
+
                 <option value="monthly">
                   รายเดือน
                 </option>
@@ -597,267 +447,319 @@ export default function Dashboard() {
                 </option>
               </select>
             </div>
+
+            {/* เลือกพลังงาน */}
+            <div>
+              <label style={labelStyle}>
+                ข้อมูลพลังงาน
+              </label>
+
+              <select
+                value={selectedEnergy}
+                onChange={(e) =>
+                  setSelectedEnergy(e.target.value)
+                }
+                style={selectStyle}
+              >
+                {energyTypes.map((type) => (
+                  <option
+                    key={type.id}
+                    value={type.energy_key}
+                  >
+                    {type.energy_name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* CHART */}
+        {/* Chart */}
         <div
           style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "14px",
+            ...cardStyle,
             marginBottom: "20px",
           }}
         >
-          <h2>
-            {
-              selectedEnergy?.energy_name
-            }{" "}
-            {chartMode ===
-            "monthly"
-              ? "รายเดือน"
-              : "รายปี"}
+          <h2 style={{ marginTop: 0 }}>
+            📊 การใช้พลังงาน
           </h2>
 
-          <p
-            style={{
-              color: "#666",
-            }}
-          >
-            หน่วย:{" "}
-            {
-              selectedEnergy?.unit
-            }
-          </p>
+          {selectedEnergyType && (
+            <p
+              style={{
+                color: "#666",
+                marginTop: "-8px",
+              }}
+            >
+              {selectedEnergyType.energy_name} (
+              {selectedEnergyType.unit})
+            </p>
+          )}
 
           <div
             style={{
               width: "100%",
               height: "400px",
+              marginTop: "20px",
             }}
           >
-            <ResponsiveContainer>
-              {chartMode ===
-              "monthly" ? (
-                <LineChart
-                  data={
-                    monthlyData
-                  }
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                  />
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
 
-                  <XAxis
-                    dataKey="month"
-                  />
+                <XAxis
+                  dataKey="label"
+                />
 
-                  <YAxis />
+                <YAxis />
 
-                  <Tooltip />
+                <Tooltip />
 
-                  <Legend />
+                <Legend />
 
+                {selectedEnergyType && (
                   <Line
                     type="monotone"
-                    dataKey="value"
+                    dataKey={
+                      selectedEnergyType.energy_key
+                    }
                     name={
-                      selectedEnergy?.energy_name
+                      selectedEnergyType.energy_name
                     }
-                    stroke="#2563eb"
-                    strokeWidth={
-                      3
-                    }
+                    strokeWidth={3}
+                    dot={false}
                   />
-                </LineChart>
-              ) : (
-                <BarChart
-                  data={
-                    yearlyData
-                  }
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                  />
-
-                  <XAxis
-                    dataKey="year"
-                  />
-
-                  <YAxis />
-
-                  <Tooltip />
-
-                  <Legend />
-
-                  <Bar
-                    dataKey="value"
-                    name={
-                      selectedEnergy?.energy_name
-                    }
-                    fill="#2563eb"
-                  />
-                </BarChart>
-              )}
+                )}
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* DATA TABLE */}
+        {/* Bar Chart */}
         <div
           style={{
-            background: "white",
-            padding: "25px",
-            borderRadius: "14px",
+            ...cardStyle,
+            marginBottom: "20px",
           }}
         >
-          <h2>
+          <h2 style={{ marginTop: 0 }}>
+            📈 เปรียบเทียบการใช้พลังงาน
+          </h2>
+
+          <div
+            style={{
+              width: "100%",
+              height: "350px",
+              marginTop: "20px",
+            }}
+          >
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+            >
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis
+                  dataKey="label"
+                />
+
+                <YAxis />
+
+                <Tooltip />
+
+                <Legend />
+
+                {selectedEnergyType && (
+                  <Bar
+                    dataKey={
+                      selectedEnergyType.energy_key
+                    }
+                    name={
+                      selectedEnergyType.energy_name
+                    }
+                  />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>
             📋 ข้อมูลพลังงาน
           </h2>
 
-          {loading ? (
-            <p>
-              กำลังโหลดข้อมูล...
-            </p>
-          ) : data.length ===
-            0 ? (
-            <p>
-              ยังไม่มีข้อมูล
-            </p>
-          ) : (
-            <div
+          <div
+            style={{
+              overflowX: "auto",
+              marginTop: "20px",
+            }}
+          >
+            <table
               style={{
-                overflowX:
-                  "auto",
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: "800px",
               }}
             >
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse:
-                    "collapse",
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      background:
-                        "#f1f5f9",
-                    }}
-                  >
+              <thead>
+                <tr>
+                  <th style={thStyle}>
+                    {viewMode === "daily"
+                      ? "วันที่"
+                      : viewMode === "monthly"
+                      ? "เดือน"
+                      : "ปี"}
+                  </th>
+
+                  {energyTypes.map((type) => (
                     <th
-                      style={
-                        thStyle
-                      }
+                      key={type.id}
+                      style={thStyle}
                     >
-                      วันที่
-                    </th>
-
-                    {energyTypes.map(
-                      (item) => (
-                        <th
-                          key={
-                            item.energy_key
-                          }
-                          style={
-                            thStyle
-                          }
-                        >
-                          {
-                            item.energy_name
-                          }
-                          <br />
-                          <small>
-                            (
-                            {
-                              item.unit
-                            }
-                            )
-                          </small>
-                        </th>
-                      )
-                    )}
-
-                    <th
-                      style={
-                        thStyle
-                      }
-                    >
-                      หมายเหตุ
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {data.map(
-                    (item) => (
-                      <tr
-                        key={
-                          item.id
-                        }
+                      {type.energy_name}
+                      <br />
+                      <span
+                        style={{
+                          fontWeight: "normal",
+                          fontSize: "12px",
+                        }}
                       >
-                        <td
-                          style={
-                            tdStyle
-                          }
-                        >
-                          {
-                            item.record_date
-                          }
-                        </td>
+                        ({type.unit})
+                      </span>
+                    </th>
+                  ))}
 
-                        {energyTypes.map(
-                          (
-                            energy
-                          ) => (
-                            <td
-                              key={
-                                energy.energy_key
-                              }
-                              style={
-                                tdStyle
-                              }
-                            >
-                              {Number(
-                                item[
-                                  energy.energy_key
-                                ] ||
-                                  0
-                              ).toLocaleString()}
-                            </td>
-                          )
-                        )}
+                  <th style={thStyle}>
+                    หมายเหตุ
+                  </th>
+                </tr>
+              </thead>
 
+              <tbody>
+                {tableData.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={
+                        energyTypes.length + 2
+                      }
+                      style={{
+                        textAlign: "center",
+                        padding: "30px",
+                        color: "#888",
+                      }}
+                    >
+                      ยังไม่มีข้อมูล
+                    </td>
+                  </tr>
+                ) : (
+                  tableData.map((row, index) => (
+                    <tr
+                      key={
+                        row.record_date +
+                        "-" +
+                        index
+                      }
+                    >
+                      <td style={tdStyle}>
+                        {viewMode === "daily"
+                          ? formatDate(
+                              row.record_date
+                            )
+                          : row.record_date}
+                      </td>
+
+                      {energyTypes.map((type) => (
                         <td
-                          style={
-                            tdStyle
-                          }
+                          key={type.id}
+                          style={tdStyle}
                         >
-                          {item.note ||
-                            "-"}
+                          {getEnergyValue(
+                            row,
+                            type.energy_key
+                          ).toLocaleString()}
                         </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      ))}
+
+                      <td style={tdStyle}>
+                        {row.note || "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
     </main>
   );
 }
 
+/* =========================
+   Styles
+========================= */
+
+const pageStyle = {
+  minHeight: "100vh",
+  background: "#f4f7fb",
+  padding: "30px",
+  fontFamily: "Arial, sans-serif",
+};
+
+const containerStyle = {
+  maxWidth: "1400px",
+  margin: "auto",
+};
+
+const cardStyle = {
+  background: "white",
+  padding: "25px",
+  borderRadius: "16px",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+};
+
+const menuButtonStyle = {
+  textDecoration: "none",
+  color: "white",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  fontWeight: "bold",
+  display: "inline-block",
+};
+
+const labelStyle = {
+  display: "block",
+  fontWeight: "bold",
+  marginBottom: "8px",
+};
+
+const selectStyle = {
+  minWidth: "180px",
+  padding: "11px 14px",
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  background: "white",
+  fontSize: "15px",
+};
+
 const thStyle = {
+  border: "1px solid #ddd",
   padding: "12px",
-  borderBottom:
-    "1px solid #ddd",
-  textAlign: "left",
+  background: "#f8fafc",
+  textAlign: "center",
+  whiteSpace: "nowrap",
 };
 
 const tdStyle = {
+  border: "1px solid #ddd",
   padding: "12px",
-  borderBottom:
-    "1px solid #eee",
+  textAlign: "center",
 };
