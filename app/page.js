@@ -30,12 +30,14 @@ function getEnergyIcon(name = "") {
   if (text.includes("ไฟฟ้า") || text.includes("electric")) return "⚡";
   if (text.includes("solar") || text.includes("แสงอาทิตย์")) return "☀️";
   if (text.includes("gas") || text.includes("ก๊าซ")) return "🔥";
+
   if (
     text.includes("น้ำมัน") ||
     text.includes("fuel") ||
     text.includes("oil")
   )
     return "⛽";
+
   if (text.includes("steam") || text.includes("ไอน้ำ")) return "♨️";
   if (text.includes("น้ำ") || text.includes("water")) return "💧";
   if (text.includes("ลม") || text.includes("wind")) return "🌬️";
@@ -66,15 +68,6 @@ const months = [
 ];
 
 /* =========================================================
-   DAYS
-========================================================= */
-
-const days = Array.from(
-  { length: 31 },
-  (_, index) => String(index + 1).padStart(2, "0")
-);
-
-/* =========================================================
    DASHBOARD
 ========================================================= */
 
@@ -88,10 +81,9 @@ export default function Dashboard() {
   ======================================================= */
 
   const [selectedEnergy, setSelectedEnergy] = useState("");
-  const [viewType, setViewType] = useState("daily");
+  const [viewType, setViewType] = useState("monthly");
   const [chartType, setChartType] = useState("line");
 
-  const [selectedDay, setSelectedDay] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
 
@@ -113,9 +105,6 @@ export default function Dashboard() {
     useState("line");
 
   const [comparisonMonth, setComparisonMonth] =
-    useState("");
-
-  const [comparisonDay, setComparisonDay] =
     useState("");
 
   const [comparisonYear, setComparisonYear] =
@@ -266,17 +255,8 @@ export default function Dashboard() {
         currentDate.getMonth() + 1
       ).padStart(2, "0");
 
-    const currentDay =
-      String(
-        currentDate.getDate()
-      ).padStart(2, "0");
-
     if (!selectedMonth) {
       setSelectedMonth(currentMonth);
-    }
-
-    if (!selectedDay) {
-      setSelectedDay(currentDay);
     }
 
     if (
@@ -309,10 +289,6 @@ export default function Dashboard() {
       setComparisonMonth(currentMonth);
     }
 
-    if (!comparisonDay) {
-      setComparisonDay(currentDay);
-    }
-
     if (
       availableYears.length > 0 &&
       !comparisonYear
@@ -337,12 +313,10 @@ export default function Dashboard() {
   }, [
     availableYears,
     selectedMonth,
-    selectedDay,
     selectedYear,
     overviewMonth,
     overviewYear,
     comparisonMonth,
-    comparisonDay,
     comparisonYear,
     comparisonYear2,
   ]);
@@ -364,10 +338,6 @@ export default function Dashboard() {
 
         const month =
           date.substring(5, 7);
-
-        /*
-          ใช้ข้อมูล Monthly เป็นหลัก
-        */
 
         if (
           row.period_type === "monthly" &&
@@ -402,7 +372,7 @@ export default function Dashboard() {
     return records
       .filter((row) => {
         const period =
-          row.period_type || "daily";
+          row.period_type || "monthly";
 
         if (period !== viewType) {
           return false;
@@ -416,9 +386,6 @@ export default function Dashboard() {
 
         const month =
           date.substring(5, 7);
-
-        const day =
-          date.substring(8, 10);
 
         if (
           selectedYear &&
@@ -435,24 +402,6 @@ export default function Dashboard() {
           return false;
         }
 
-        if (
-          viewType === "daily"
-        ) {
-          if (
-            selectedMonth &&
-            month !== selectedMonth
-          ) {
-            return false;
-          }
-
-          if (
-            selectedDay &&
-            day !== selectedDay
-          ) {
-            return false;
-          }
-        }
-
         return true;
       })
       .sort(
@@ -463,7 +412,6 @@ export default function Dashboard() {
   }, [
     records,
     viewType,
-    selectedDay,
     selectedMonth,
     selectedYear,
   ]);
@@ -481,12 +429,6 @@ export default function Dashboard() {
           row.record_date || "";
 
         let label = date;
-
-        if (
-          viewType === "daily"
-        ) {
-          label = date;
-        }
 
         if (
           viewType === "monthly"
@@ -557,7 +499,16 @@ export default function Dashboard() {
         comparisonType ===
         "monthly"
       ) {
-        return months.map(
+        const selectedMonths =
+          comparisonMonth
+            ? months.filter(
+                (month) =>
+                  month.value ===
+                  comparisonMonth
+              )
+            : months;
+
+        return selectedMonths.map(
           (month) => {
             const item = {
               label: month.label,
@@ -659,84 +610,12 @@ export default function Dashboard() {
         );
       }
 
-      /* =========================================
-         DAILY
-      ========================================= */
-
-      if (
-        comparisonType ===
-        "daily"
-      ) {
-        const item = {
-          label:
-            `${comparisonDay} ${
-              months.find(
-                (month) =>
-                  month.value ===
-                  comparisonMonth
-              )?.label ||
-              ""
-            }`,
-        };
-
-        years.forEach(
-          (year) => {
-            const matchingRows =
-              records.filter(
-                (row) => {
-                  const date =
-                    row.record_date ||
-                    "";
-
-                  return (
-                    row.period_type ===
-                      "daily" &&
-                    date.substring(
-                      0,
-                      4
-                    ) === year &&
-                    date.substring(
-                      5,
-                      7
-                    ) ===
-                      comparisonMonth &&
-                    date.substring(
-                      8,
-                      10
-                    ) ===
-                      comparisonDay
-                  );
-                }
-              );
-
-            item[
-              `year_${year}`
-            ] =
-              matchingRows.reduce(
-                (
-                  sum,
-                  row
-                ) =>
-                  sum +
-                  getEnergyValue(
-                    row,
-                    selectedType
-                  ),
-                0
-              );
-          }
-        );
-
-        return [item];
-      }
-
       return [];
     }, [
       records,
       selectedType,
       comparisonType,
       comparisonMonth,
-      comparisonDay,
       comparisonYear,
       comparisonYear2,
       energyValues,
@@ -763,6 +642,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="loadingScreen">
+
         <div className="loadingIcon">
           ⚡
         </div>
@@ -774,6 +654,7 @@ export default function Dashboard() {
         <p>
           กรุณารอสักครู่...
         </p>
+
       </div>
     );
   }
@@ -1822,16 +1703,11 @@ export default function Dashboard() {
                     e.target.value
                   );
 
-                  setSelectedDay("");
                   setSelectedMonth("");
                   setSelectedYear("");
 
                 }}
               >
-
-                <option value="daily">
-                  รายวัน
-                </option>
 
                 <option value="monthly">
                   รายเดือน
@@ -1882,119 +1758,6 @@ export default function Dashboard() {
           ================================================= */}
 
           <section className="selectionCard">
-
-            {/* DAILY */}
-
-            {viewType === "daily" && (
-              <>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Day
-                  </label>
-
-                  <select
-                    className="select"
-                    value={selectedDay}
-                    onChange={(e) =>
-                      setSelectedDay(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      All Days
-                    </option>
-
-                    {days.map(
-                      (day) => (
-                        <option
-                          key={day}
-                          value={day}
-                        >
-                          {day}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Month
-                  </label>
-
-                  <select
-                    className="select"
-                    value={selectedMonth}
-                    onChange={(e) =>
-                      setSelectedMonth(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      All Months
-                    </option>
-
-                    {months.map(
-                      (month) => (
-                        <option
-                          key={month.value}
-                          value={month.value}
-                        >
-                          {month.label}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Year
-                  </label>
-
-                  <select
-                    className="select"
-                    value={selectedYear}
-                    onChange={(e) =>
-                      setSelectedYear(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      All Years
-                    </option>
-
-                    {availableYears.map(
-                      (year) => (
-                        <option
-                          key={year}
-                          value={year}
-                        >
-                          {year}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-              </>
-            )}
 
             {/* MONTHLY */}
 
@@ -2280,6 +2043,8 @@ export default function Dashboard() {
                     e.target.value
                   );
 
+                  setComparisonMonth("");
+
                 }}
               >
 
@@ -2289,10 +2054,6 @@ export default function Dashboard() {
 
                 <option value="yearly">
                   Yearly
-                </option>
-
-                <option value="daily">
-                  Daily
                 </option>
 
               </select>
@@ -2528,155 +2289,6 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* DAILY COMPARISON */}
-
-            {comparisonType ===
-              "daily" && (
-              <>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Day
-                  </label>
-
-                  <select
-                    className="select"
-                    value={comparisonDay}
-                    onChange={(e) =>
-                      setComparisonDay(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      Select Day
-                    </option>
-
-                    {days.map(
-                      (day) => (
-                        <option
-                          key={day}
-                          value={day}
-                        >
-                          {day}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Month
-                  </label>
-
-                  <select
-                    className="select"
-                    value={comparisonMonth}
-                    onChange={(e) =>
-                      setComparisonMonth(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      Select Month
-                    </option>
-
-                    {months.map(
-                      (month) => (
-                        <option
-                          key={month.value}
-                          value={month.value}
-                        >
-                          {month.label}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Year 1
-                  </label>
-
-                  <select
-                    className="select"
-                    value={comparisonYear}
-                    onChange={(e) =>
-                      setComparisonYear(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      Select Year
-                    </option>
-
-                    {availableYears.map(
-                      (year) => (
-                        <option
-                          key={year}
-                          value={year}
-                        >
-                          {year}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-                <div className="selectionGroup">
-
-                  <label className="selectionLabel">
-                    Year 2
-                  </label>
-
-                  <select
-                    className="select"
-                    value={comparisonYear2}
-                    onChange={(e) =>
-                      setComparisonYear2(
-                        e.target.value
-                      )
-                    }
-                  >
-
-                    <option value="">
-                      Select Year
-                    </option>
-
-                    {availableYears.map(
-                      (year) => (
-                        <option
-                          key={year}
-                          value={year}
-                        >
-                          {year}
-                        </option>
-                      )
-                    )}
-
-                  </select>
-
-                </div>
-
-              </>
-            )}
-
           </section>
 
           {/* =================================================
@@ -2691,10 +2303,7 @@ export default function Dashboard() {
                 {comparisonType ===
                 "monthly"
                   ? "Monthly Energy Consumption Comparison"
-                  : comparisonType ===
-                    "yearly"
-                  ? "Yearly Energy Consumption Comparison"
-                  : "Daily Energy Consumption Comparison"}
+                  : "Yearly Energy Consumption Comparison"}
               </h2>
 
               <div className="chartTools">
@@ -2769,25 +2378,9 @@ export default function Dashboard() {
 
                     <Legend />
 
-                    {comparisonYearsToShow.map(
-                      (year) => (
-
-                        <Line
-                          key={year}
-                          type="monotone"
-                          dataKey={`year_${year}`}
-                          name={year}
-                          strokeWidth={3}
-                          dot={{
-                            r: 4,
-                          }}
-                        />
-
-                      )
-                    )}
-
                     {comparisonType ===
-                      "yearly" && (
+                      "yearly" ? (
+
                       <Line
                         type="monotone"
                         dataKey="value"
@@ -2797,6 +2390,26 @@ export default function Dashboard() {
                           r: 4,
                         }}
                       />
+
+                    ) : (
+
+                      comparisonYearsToShow.map(
+                        (year) => (
+
+                          <Line
+                            key={year}
+                            type="monotone"
+                            dataKey={`year_${year}`}
+                            name={year}
+                            strokeWidth={3}
+                            dot={{
+                              r: 4,
+                            }}
+                          />
+
+                        )
+                      )
+
                     )}
 
                   </LineChart>
@@ -2827,24 +2440,28 @@ export default function Dashboard() {
 
                     <Legend />
 
-                    {comparisonYearsToShow.map(
-                      (year) => (
-
-                        <Bar
-                          key={year}
-                          dataKey={`year_${year}`}
-                          name={year}
-                        />
-
-                      )
-                    )}
-
                     {comparisonType ===
-                      "yearly" && (
+                      "yearly" ? (
+
                       <Bar
                         dataKey="value"
                         name="Energy Consumption"
                       />
+
+                    ) : (
+
+                      comparisonYearsToShow.map(
+                        (year) => (
+
+                          <Bar
+                            key={year}
+                            dataKey={`year_${year}`}
+                            name={year}
+                          />
+
+                        )
+                      )
+
                     )}
 
                   </BarChart>
@@ -2894,12 +2511,14 @@ export default function Dashboard() {
                     <th>
                       {selectedType?.energy_name ||
                         "Energy"}
+
                       <br />
 
                       <small>
                         {selectedType?.unit ||
                           ""}
                       </small>
+
                     </th>
 
                     <th>
@@ -2925,10 +2544,7 @@ export default function Dashboard() {
                           {row.period_type ===
                           "monthly"
                             ? "Monthly"
-                            : row.period_type ===
-                              "yearly"
-                            ? "Yearly"
-                            : "Daily"}
+                            : "Yearly"}
                         </td>
 
                         <td>
