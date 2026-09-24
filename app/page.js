@@ -20,6 +20,93 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 );
 
+/* =========================================================
+   ICON ของพลังงานแต่ละประเภท
+========================================================= */
+
+function getEnergyIcon(name = "") {
+  const text = name.toLowerCase();
+
+  if (
+    text.includes("ไฟฟ้า") ||
+    text.includes("electric")
+  ) {
+    return "⚡";
+  }
+
+  if (
+    text.includes("solar") ||
+    text.includes("แสงอาทิตย์") ||
+    text.includes("พลังงานแสงอาทิตย์")
+  ) {
+    return "☀️";
+  }
+
+  if (
+    text.includes("gas") ||
+    text.includes("ก๊าซ") ||
+    text.includes("ก๊าซธรรมชาติ")
+  ) {
+    return "🔥";
+  }
+
+  if (
+    text.includes("น้ำมัน") ||
+    text.includes("fuel") ||
+    text.includes("oil")
+  ) {
+    return "⛽";
+  }
+
+  if (
+    text.includes("steam") ||
+    text.includes("ไอน้ำ")
+  ) {
+    return "♨️";
+  }
+
+  if (
+    text.includes("น้ำ") ||
+    text.includes("water")
+  ) {
+    return "💧";
+  }
+
+  if (
+    text.includes("ลม") ||
+    text.includes("wind")
+  ) {
+    return "🌬️";
+  }
+
+  if (
+    text.includes("แบต") ||
+    text.includes("battery")
+  ) {
+    return "🔋";
+  }
+
+  if (
+    text.includes("ชีวมวล") ||
+    text.includes("biomass")
+  ) {
+    return "🌱";
+  }
+
+  if (
+    text.includes("ความร้อน") ||
+    text.includes("heat")
+  ) {
+    return "🌡️";
+  }
+
+  return "🔋";
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
 export default function Dashboard() {
   const [energyTypes, setEnergyTypes] = useState([]);
   const [records, setRecords] = useState([]);
@@ -30,6 +117,10 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
 
+  /* =======================================================
+     LOAD DATA
+  ======================================================= */
+
   useEffect(() => {
     loadData();
   }, []);
@@ -38,9 +129,9 @@ export default function Dashboard() {
     setLoading(true);
 
     const [
-      { data: types },
-      { data: dataRows },
-      { data: valueRows },
+      { data: types, error: typeError },
+      { data: dataRows, error: dataError },
+      { data: valueRows, error: valueError },
     ] = await Promise.all([
       supabase
         .from("energy_types")
@@ -60,21 +151,40 @@ export default function Dashboard() {
         .select("*"),
     ]);
 
+    if (typeError) {
+      console.error(typeError);
+    }
+
+    if (dataError) {
+      console.error(dataError);
+    }
+
+    if (valueError) {
+      console.error(valueError);
+    }
+
     setEnergyTypes(types || []);
     setRecords(dataRows || []);
     setEnergyValues(valueRows || []);
 
     if (types?.length > 0) {
       setSelectedEnergy(
-        (current) => current || types[0].energy_key
+        (current) =>
+          current || types[0].energy_key
       );
     }
 
     setLoading(false);
   }
 
+  /* =======================================================
+     GET ENERGY VALUE
+  ======================================================= */
+
   function getEnergyValue(row, energyType) {
-    if (!row || !energyType) return 0;
+    if (!row || !energyType) {
+      return 0;
+    }
 
     const dynamicValue = energyValues.find(
       (item) =>
@@ -86,23 +196,36 @@ export default function Dashboard() {
       return Number(dynamicValue.value) || 0;
     }
 
-    return Number(row[energyType.energy_key]) || 0;
+    return Number(
+      row[energyType.energy_key]
+    ) || 0;
   }
 
+  /* =======================================================
+     SELECTED ENERGY
+  ======================================================= */
+
   const selectedType = energyTypes.find(
-    (item) => item.energy_key === selectedEnergy
+    (item) =>
+      item.energy_key === selectedEnergy
   );
 
+  /* =======================================================
+     CHART DATA
+  ======================================================= */
+
   const chartData = useMemo(() => {
-    if (!selectedType) return [];
+    if (!selectedType) {
+      return [];
+    }
 
     const result = {};
 
     records.forEach((row) => {
-      if (
-        row.period_type &&
-        row.period_type !== viewType
-      ) {
+      const rowPeriod =
+        row.period_type || "daily";
+
+      if (rowPeriod !== viewType) {
         return;
       }
 
@@ -145,12 +268,19 @@ export default function Dashboard() {
     viewType,
   ]);
 
+  /* =======================================================
+     SUMMARY
+  ======================================================= */
+
   const summary = useMemo(() => {
     return energyTypes.map((type) => {
       let total = 0;
 
       records.forEach((row) => {
-        total += getEnergyValue(row, type);
+        total += getEnergyValue(
+          row,
+          type
+        );
       });
 
       return {
@@ -164,15 +294,31 @@ export default function Dashboard() {
     energyValues,
   ]);
 
+  /* =======================================================
+     LOADING
+  ======================================================= */
+
   if (loading) {
     return (
       <div className="loadingScreen">
-        <div className="loadingIcon">⚡</div>
-        <h2>กำลังโหลดข้อมูลพลังงาน</h2>
-        <p>กรุณารอสักครู่...</p>
+        <div className="loadingIcon">
+          ⚡
+        </div>
+
+        <h2>
+          กำลังโหลดข้อมูลพลังงาน
+        </h2>
+
+        <p>
+          กรุณารอสักครู่...
+        </p>
       </div>
     );
   }
+
+  /* =======================================================
+     PAGE
+  ======================================================= */
 
   return (
     <>
@@ -189,12 +335,14 @@ export default function Dashboard() {
             "Noto Sans Thai",
             Arial,
             sans-serif;
+
           background:
             linear-gradient(
               135deg,
               #f8fafc 0%,
               #eef5ff 100%
             );
+
           color: #172033;
         }
 
@@ -203,12 +351,19 @@ export default function Dashboard() {
           font-family: inherit;
         }
 
+        /* ============================
+           LOADING
+        ============================ */
+
         .loadingScreen {
           min-height: 100vh;
+
           display: flex;
           flex-direction: column;
+
           justify-content: center;
           align-items: center;
+
           background: #f5f7fb;
         }
 
@@ -221,6 +376,10 @@ export default function Dashboard() {
           color: #718096;
         }
 
+        /* ============================
+           PAGE
+        ============================ */
+
         .page {
           min-height: 100vh;
           padding: 28px;
@@ -231,21 +390,29 @@ export default function Dashboard() {
           margin: auto;
         }
 
-        /* HEADER */
+        /* ============================
+           HEADER
+        ============================ */
 
         .header {
           position: relative;
           overflow: hidden;
+
           background:
             linear-gradient(
               135deg,
               #0f172a,
               #172554
             );
+
           color: white;
+
           border-radius: 24px;
+
           padding: 30px;
+
           margin-bottom: 24px;
+
           box-shadow:
             0 15px 40px
             rgba(15, 23, 42, 0.18);
@@ -253,10 +420,15 @@ export default function Dashboard() {
 
         .headerGlow {
           position: absolute;
+
           width: 300px;
           height: 300px;
+
           border-radius: 50%;
-          background: rgba(59, 130, 246, 0.15);
+
+          background:
+            rgba(59, 130, 246, 0.15);
+
           right: -80px;
           top: -120px;
         }
@@ -275,47 +447,71 @@ export default function Dashboard() {
         .logo {
           width: 55px;
           height: 55px;
+
           border-radius: 16px;
-          background: rgba(255,255,255,0.12);
+
+          background:
+            rgba(255,255,255,0.12);
+
           display: flex;
           align-items: center;
           justify-content: center;
+
           font-size: 30px;
         }
 
         .header h1 {
           margin: 0;
+
           font-size: 29px;
+
           font-weight: 700;
         }
 
         .headerSubtitle {
           margin: 8px 0 0;
+
           color: #cbd5e1;
+
           font-size: 15px;
         }
 
         .headerButtons {
           display: flex;
           flex-wrap: wrap;
+
           gap: 10px;
+
           margin-top: 25px;
         }
 
         .headerButton {
           text-decoration: none;
+
           padding: 11px 17px;
+
           border-radius: 11px;
-          background: rgba(255,255,255,0.1);
+
+          background:
+            rgba(255,255,255,0.1);
+
           color: white;
-          border: 1px solid rgba(255,255,255,0.15);
+
+          border:
+            1px solid
+            rgba(255,255,255,0.15);
+
           transition: 0.2s;
+
           font-size: 14px;
         }
 
         .headerButton:hover {
-          background: rgba(255,255,255,0.2);
-          transform: translateY(-1px);
+          background:
+            rgba(255,255,255,0.2);
+
+          transform:
+            translateY(-1px);
         }
 
         .headerButton.primary {
@@ -324,49 +520,75 @@ export default function Dashboard() {
           font-weight: 600;
         }
 
-        /* SECTION */
+        /* ============================
+           SECTION TITLE
+        ============================ */
 
         .sectionTitle {
           display: flex;
-          justify-content: space-between;
+
+          justify-content:
+            space-between;
+
           align-items: center;
-          margin: 28px 0 14px;
+
+          margin:
+            28px 0 14px;
         }
 
         .sectionTitle h2 {
           margin: 0;
+
           font-size: 19px;
         }
 
         .sectionTitle span {
           font-size: 13px;
+
           color: #718096;
         }
 
-        /* SUMMARY */
+        /* ============================
+           SUMMARY
+        ============================ */
 
         .summaryGrid {
           display: grid;
+
           grid-template-columns:
-            repeat(auto-fit, minmax(210px, 1fr));
+            repeat(
+              auto-fit,
+              minmax(210px, 1fr)
+            );
+
           gap: 16px;
         }
 
         .summaryCard {
           position: relative;
           overflow: hidden;
+
           background: white;
+
           border-radius: 18px;
+
           padding: 20px;
-          border: 1px solid #e8edf5;
+
+          border:
+            1px solid
+            #e8edf5;
+
           box-shadow:
             0 5px 20px
             rgba(15, 23, 42, 0.05);
+
           transition: 0.2s;
         }
 
         .summaryCard:hover {
-          transform: translateY(-3px);
+          transform:
+            translateY(-3px);
+
           box-shadow:
             0 10px 28px
             rgba(15, 23, 42, 0.09);
@@ -374,50 +596,78 @@ export default function Dashboard() {
 
         .summaryTop {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
 
-        .summaryIcon {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          background: #eff6ff;
-          display: flex;
+          justify-content:
+            space-between;
+
           align-items: center;
-          justify-content: center;
-          font-size: 20px;
         }
 
         .summaryName {
           color: #64748b;
+
           font-size: 14px;
+
+          font-weight: 600;
+        }
+
+        .summaryIcon {
+          width: 45px;
+          height: 45px;
+
+          border-radius: 13px;
+
+          background: #eff6ff;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
+          font-size: 23px;
         }
 
         .summaryValue {
-          font-size: 26px;
+          font-size: 27px;
+
           font-weight: 700;
+
           margin-top: 16px;
+
           color: #0f172a;
         }
 
         .summaryUnit {
           margin-top: 4px;
+
           font-size: 12px;
+
           color: #94a3b8;
         }
 
-        /* FILTER */
+        /* ============================
+           FILTER
+        ============================ */
 
         .filterCard {
           background: white;
-          border: 1px solid #e8edf5;
+
+          border:
+            1px solid
+            #e8edf5;
+
           border-radius: 18px;
+
           padding: 20px;
+
           display: flex;
+
           flex-wrap: wrap;
+
           gap: 18px;
+
           align-items: end;
+
           box-shadow:
             0 5px 20px
             rgba(15, 23, 42, 0.04);
@@ -429,37 +679,59 @@ export default function Dashboard() {
 
         .filterLabel {
           display: block;
+
           font-size: 13px;
+
           color: #64748b;
+
           margin-bottom: 7px;
+
           font-weight: 600;
         }
 
         .select {
           width: 100%;
+
           padding: 11px 14px;
-          border: 1px solid #dbe3ef;
+
+          border:
+            1px solid
+            #dbe3ef;
+
           border-radius: 10px;
+
           background: white;
+
           color: #172033;
+
           outline: none;
         }
 
         .select:focus {
           border-color: #3b82f6;
+
           box-shadow:
             0 0 0 3px
             rgba(59,130,246,0.1);
         }
 
-        /* CHART */
+        /* ============================
+           CHART
+        ============================ */
 
         .chartCard {
           background: white;
-          border: 1px solid #e8edf5;
+
+          border:
+            1px solid
+            #e8edf5;
+
           border-radius: 18px;
+
           padding: 24px;
+
           margin-top: 16px;
+
           box-shadow:
             0 5px 20px
             rgba(15, 23, 42, 0.04);
@@ -467,22 +739,32 @@ export default function Dashboard() {
 
         .chartHeader {
           display: flex;
-          justify-content: space-between;
+
+          justify-content:
+            space-between;
+
           align-items: center;
+
           margin-bottom: 15px;
         }
 
         .chartHeader h2 {
           margin: 0;
+
           font-size: 18px;
         }
 
         .chartBadge {
           background: #eff6ff;
+
           color: #2563eb;
+
           padding: 6px 10px;
+
           border-radius: 8px;
+
           font-size: 12px;
+
           font-weight: 600;
         }
 
@@ -491,14 +773,23 @@ export default function Dashboard() {
           height: 330px;
         }
 
-        /* TABLE */
+        /* ============================
+           TABLE
+        ============================ */
 
         .tableCard {
           background: white;
-          border: 1px solid #e8edf5;
+
+          border:
+            1px solid
+            #e8edf5;
+
           border-radius: 18px;
+
           padding: 24px;
+
           margin-top: 16px;
+
           box-shadow:
             0 5px 20px
             rgba(15, 23, 42, 0.04);
@@ -510,24 +801,40 @@ export default function Dashboard() {
 
         table {
           width: 100%;
-          border-collapse: collapse;
+
+          border-collapse:
+            collapse;
+
           min-width: 800px;
         }
 
         th {
           background: #f8fafc;
+
           color: #475569;
+
           font-size: 13px;
+
           font-weight: 600;
+
           text-align: left;
+
           padding: 13px;
-          border-bottom: 1px solid #e2e8f0;
+
+          border-bottom:
+            1px solid
+            #e2e8f0;
         }
 
         td {
           padding: 13px;
-          border-bottom: 1px solid #eef2f7;
+
+          border-bottom:
+            1px solid
+            #eef2f7;
+
           font-size: 14px;
+
           color: #334155;
         }
 
@@ -537,18 +844,25 @@ export default function Dashboard() {
 
         .empty {
           text-align: center;
+
           padding: 45px;
+
           color: #94a3b8;
         }
-
-        /* FOOTER */
 
         .footer {
           text-align: center;
+
           color: #94a3b8;
+
           font-size: 12px;
+
           padding: 30px 0 10px;
         }
+
+        /* ============================
+           MOBILE
+        ============================ */
 
         @media (max-width: 700px) {
 
@@ -558,6 +872,7 @@ export default function Dashboard() {
 
           .header {
             padding: 22px;
+
             border-radius: 18px;
           }
 
@@ -586,14 +901,19 @@ export default function Dashboard() {
           .tableCard {
             padding: 16px;
           }
+
         }
 
       `}</style>
 
       <main className="page">
+
         <div className="container">
 
-          {/* HEADER */}
+          {/* =================================================
+              HEADER
+          ================================================= */}
+
           <section className="header">
 
             <div className="headerGlow" />
@@ -607,6 +927,7 @@ export default function Dashboard() {
                 </div>
 
                 <div>
+
                   <h1>
                     Factory Energy Management
                   </h1>
@@ -614,6 +935,7 @@ export default function Dashboard() {
                   <p className="headerSubtitle">
                     ระบบจัดการและติดตามการใช้พลังงานในโรงงาน
                   </p>
+
                 </div>
 
               </div>
@@ -647,9 +969,12 @@ export default function Dashboard() {
 
           </section>
 
-          {/* SUMMARY */}
+          {/* =================================================
+              SUMMARY
+          ================================================= */}
 
           <div className="sectionTitle">
+
             <h2>
               ภาพรวมการใช้พลังงาน
             </h2>
@@ -657,6 +982,7 @@ export default function Dashboard() {
             <span>
               ข้อมูลทั้งหมด
             </span>
+
           </div>
 
           <section className="summaryGrid">
@@ -675,17 +1001,23 @@ export default function Dashboard() {
                   </div>
 
                   <div className="summaryIcon">
-                    ⚡
+                    {getEnergyIcon(
+                      item.energy_name
+                    )}
                   </div>
 
                 </div>
 
                 <div className="summaryValue">
+
                   {item.total.toLocaleString()}
+
                 </div>
 
                 <div className="summaryUnit">
+
                   {item.unit}
+
                 </div>
 
               </div>
@@ -694,12 +1026,16 @@ export default function Dashboard() {
 
           </section>
 
-          {/* FILTER */}
+          {/* =================================================
+              ANALYSIS
+          ================================================= */}
 
           <div className="sectionTitle">
+
             <h2>
               วิเคราะห์ข้อมูล
             </h2>
+
           </div>
 
           <section className="filterCard">
@@ -712,21 +1048,36 @@ export default function Dashboard() {
 
               <select
                 className="select"
+
                 value={selectedEnergy}
+
                 onChange={(e) =>
                   setSelectedEnergy(
                     e.target.value
                   )
                 }
               >
-                {energyTypes.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.energy_key}
-                  >
-                    {item.energy_name}
-                  </option>
-                ))}
+
+                {energyTypes.map(
+                  (item) => (
+
+                    <option
+                      key={item.id}
+                      value={
+                        item.energy_key
+                      }
+                    >
+
+                      {getEnergyIcon(
+                        item.energy_name
+                      )}{" "}
+                      {item.energy_name}
+
+                    </option>
+
+                  )
+                )}
+
               </select>
 
             </div>
@@ -739,13 +1090,16 @@ export default function Dashboard() {
 
               <select
                 className="select"
+
                 value={viewType}
+
                 onChange={(e) =>
                   setViewType(
                     e.target.value
                   )
                 }
               >
+
                 <option value="daily">
                   รายวัน
                 </option>
@@ -757,25 +1111,36 @@ export default function Dashboard() {
                 <option value="yearly">
                   รายปี
                 </option>
+
               </select>
 
             </div>
 
           </section>
 
-          {/* LINE CHART */}
+          {/* =================================================
+              LINE CHART
+          ================================================= */}
 
           <section className="chartCard">
 
             <div className="chartHeader">
 
               <h2>
+
+                {getEnergyIcon(
+                  selectedType?.energy_name
+                )}{" "}
+
                 แนวโน้มการใช้{" "}
                 {selectedType?.energy_name}
+
               </h2>
 
               <div className="chartBadge">
+
                 {selectedType?.unit}
+
               </div>
 
             </div>
@@ -783,6 +1148,7 @@ export default function Dashboard() {
             <div className="chart">
 
               <ResponsiveContainer>
+
                 <LineChart
                   data={chartData}
                 >
@@ -803,35 +1169,50 @@ export default function Dashboard() {
 
                   <Line
                     type="monotone"
+
                     dataKey="value"
+
                     name={
                       selectedType?.energy_name
                     }
+
                     strokeWidth={3}
+
                     dot={{
                       r: 4,
                     }}
                   />
 
                 </LineChart>
+
               </ResponsiveContainer>
 
             </div>
 
           </section>
 
-          {/* BAR CHART */}
+          {/* =================================================
+              BAR CHART
+          ================================================= */}
 
           <section className="chartCard">
 
             <div className="chartHeader">
 
               <h2>
+
+                {getEnergyIcon(
+                  selectedType?.energy_name
+                )}{" "}
+
                 เปรียบเทียบการใช้พลังงาน
+
               </h2>
 
               <div className="chartBadge">
+
                 {selectedType?.unit}
+
               </div>
 
             </div>
@@ -860,6 +1241,7 @@ export default function Dashboard() {
 
                   <Bar
                     dataKey="value"
+
                     name={
                       selectedType?.energy_name
                     }
@@ -873,7 +1255,9 @@ export default function Dashboard() {
 
           </section>
 
-          {/* TABLE */}
+          {/* =================================================
+              TABLE
+          ================================================= */}
 
           <section className="tableCard">
 
@@ -884,7 +1268,9 @@ export default function Dashboard() {
               </h2>
 
               <div className="chartBadge">
+
                 {records.length} รายการ
+
               </div>
 
             </div>
@@ -907,15 +1293,25 @@ export default function Dashboard() {
 
                     {energyTypes.map(
                       (type) => (
+
                         <th
                           key={type.id}
                         >
+
+                          {getEnergyIcon(
+                            type.energy_name
+                          )}{" "}
+
                           {type.energy_name}
+
                           <br />
+
                           <small>
                             {type.unit}
                           </small>
+
                         </th>
+
                       )
                     )}
 
@@ -941,6 +1337,7 @@ export default function Dashboard() {
                         </td>
 
                         <td>
+
                           {row.period_type ===
                           "monthly"
                             ? "รายเดือน"
@@ -948,6 +1345,7 @@ export default function Dashboard() {
                               "yearly"
                             ? "รายปี"
                             : "รายวัน"}
+
                         </td>
 
                         {energyTypes.map(
@@ -956,17 +1354,21 @@ export default function Dashboard() {
                             <td
                               key={type.id}
                             >
+
                               {getEnergyValue(
                                 row,
                                 type
                               ).toLocaleString()}
+
                             </td>
 
                           )
                         )}
 
                         <td>
+
                           {row.note || "-"}
+
                         </td>
 
                       </tr>
@@ -1005,11 +1407,18 @@ export default function Dashboard() {
 
           </section>
 
+          {/* =================================================
+              FOOTER
+          ================================================= */}
+
           <div className="footer">
+
             Factory Energy Management System
+
           </div>
 
         </div>
+
       </main>
     </>
   );
