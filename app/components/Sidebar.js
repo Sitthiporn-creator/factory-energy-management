@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -67,118 +68,110 @@ const menuItems = [
   },
 ];
 
+const styles = {
+  sidebar: {
+    width: 250,
+    minHeight: "100vh",
+    background: "linear-gradient(180deg, #0f172a 0%, #101c3a 100%)",
+    padding: "22px 16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 26,
+    boxSizing: "border-box",
+    flexShrink: 0,
+  },
+  logoRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "0 6px",
+  },
+  logoIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 20,
+    flexShrink: 0,
+  },
+  logoTitle: {
+    margin: 0,
+    fontSize: 15,
+    fontWeight: 700,
+    color: "#ffffff",
+    lineHeight: 1.3,
+  },
+  logoSubtitle: {
+    margin: 0,
+    fontSize: 12,
+    color: "#94a3b8",
+    lineHeight: 1.3,
+  },
+  menu: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  },
+  menuItemBase: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "11px 14px",
+    borderRadius: 12,
+    textDecoration: "none",
+    fontSize: 14,
+    fontWeight: 500,
+  },
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [hovered, setHovered] = useState(null);
 
   return (
-    <>
-      <style jsx>{`
-        .sidebar {
-          width: 250px;
-          min-height: 100vh;
-          background: linear-gradient(180deg, #0f172a 0%, #101c3a 100%);
-          padding: 22px 16px;
-          display: flex;
-          flex-direction: column;
-          gap: 26px;
-        }
-
-        .logoRow {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 0 6px;
-        }
-
-        .logoIcon {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #3b82f6, #6366f1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 20px;
-          flex-shrink: 0;
-        }
-
-        .logoText h1 {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 700;
-          color: white;
-          line-height: 1.3;
-        }
-
-        .logoText p {
-          margin: 0;
-          font-size: 12px;
-          color: #94a3b8;
-          line-height: 1.3;
-        }
-
-        .menu {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .menuItem {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 11px 14px;
-          border-radius: 12px;
-          text-decoration: none;
-          color: #cbd5e1;
-          font-size: 14px;
-          font-weight: 500;
-          transition: background 0.15s, color 0.15s;
-        }
-
-        .menuItem:hover {
-          background: rgba(255, 255, 255, 0.06);
-          color: white;
-        }
-
-        .menuItem.active {
-          background: linear-gradient(135deg, #2563eb, #3b82f6);
-          color: white;
-          font-weight: 600;
-          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
-        }
-
-        .menuItem svg {
-          flex-shrink: 0;
-        }
-      `}</style>
-
-      <aside className="sidebar">
-        <div className="logoRow">
-          <div className="logoIcon">⚡</div>
-          <div className="logoText">
-            <h1>Factory Energy</h1>
-            <p>Management System</p>
-          </div>
+    <aside style={styles.sidebar}>
+      <div style={styles.logoRow}>
+        <div style={styles.logoIcon}>⚡</div>
+        <div>
+          <p style={styles.logoTitle}>Factory Energy</p>
+          <p style={styles.logoSubtitle}>Management System</p>
         </div>
+      </div>
 
-        <nav className="menu">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
+      <nav style={styles.menu}>
+        {menuItems.map((item) => {
+          const isActive = pathname === item.href;
+          const isHovered = hovered === item.href;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`menuItem${isActive ? " active" : ""}`}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-    </>
+          const itemStyle = {
+            ...styles.menuItemBase,
+            color: isActive ? "#ffffff" : "#cbd5e1",
+            background: isActive
+              ? "linear-gradient(135deg, #2563eb, #3b82f6)"
+              : isHovered
+              ? "rgba(255, 255, 255, 0.06)"
+              : "transparent",
+            fontWeight: isActive ? 600 : 500,
+            boxShadow: isActive ? "0 6px 16px rgba(37, 99, 235, 0.35)" : "none",
+          };
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={itemStyle}
+              onMouseEnter={() => setHovered(item.href)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
   );
 }
