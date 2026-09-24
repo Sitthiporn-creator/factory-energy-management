@@ -8,11 +8,35 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 );
 
+const months = [
+  { value: "01", label: "มกราคม" },
+  { value: "02", label: "กุมภาพันธ์" },
+  { value: "03", label: "มีนาคม" },
+  { value: "04", label: "เมษายน" },
+  { value: "05", label: "พฤษภาคม" },
+  { value: "06", label: "มิถุนายน" },
+  { value: "07", label: "กรกฎาคม" },
+  { value: "08", label: "สิงหาคม" },
+  { value: "09", label: "กันยายน" },
+  { value: "10", label: "ตุลาคม" },
+  { value: "11", label: "พฤศจิกายน" },
+  { value: "12", label: "ธันวาคม" },
+];
+
+const years = Array.from(
+  { length: 101 },
+  (_, index) => String(2000 + index)
+);
+
 export default function InputPage() {
   const [energyTypes, setEnergyTypes] = useState([]);
   const [periodType, setPeriodType] = useState("daily");
-  const [periodLabel, setPeriodLabel] = useState("");
-  const [recordDate, setRecordDate] = useState("");
+
+  // วัน / เดือน / ปี
+  const [selectedDay, setSelectedDay] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+
   const [values, setValues] = useState({});
   const [note, setNote] = useState("");
 
@@ -58,21 +82,89 @@ export default function InputPage() {
     }));
   }
 
+  // จำนวนวันตามเดือนและปี
+  function getDaysInMonth() {
+    if (!selectedMonth || !selectedYear) {
+      return 31;
+    }
+
+    return new Date(
+      Number(selectedYear),
+      Number(selectedMonth),
+      0
+    ).getDate();
+  }
+
+  const days = Array.from(
+    { length: getDaysInMonth() },
+    (_, index) => String(index + 1).padStart(2, "0")
+  );
+
+  // ตรวจสอบวันที่เมื่อเปลี่ยนเดือนหรือปี
+  useEffect(() => {
+    if (!selectedDay) return;
+
+    const maxDay = getDaysInMonth();
+
+    if (Number(selectedDay) > maxDay) {
+      setSelectedDay(String(maxDay).padStart(2, "0"));
+    }
+  }, [selectedMonth, selectedYear]);
+
   function getRecordDate() {
+    // รายวัน
     if (periodType === "daily") {
-      return recordDate;
+      if (!selectedDay || !selectedMonth || !selectedYear) {
+        return "";
+      }
+
+      return `${selectedYear}-${selectedMonth}-${selectedDay}`;
+    }
+
+    // รายเดือน
+    if (periodType === "monthly") {
+      if (!selectedMonth || !selectedYear) {
+        return "";
+      }
+
+      return `${selectedYear}-${selectedMonth}-01`;
+    }
+
+    // รายปี
+    if (periodType === "yearly") {
+      if (!selectedYear) {
+        return "";
+      }
+
+      return `${selectedYear}-01-01`;
+    }
+
+    return "";
+  }
+
+  function getPeriodLabel() {
+    if (periodType === "daily") {
+      if (!selectedDay || !selectedMonth || !selectedYear) {
+        return "";
+      }
+
+      return `${selectedYear}-${selectedMonth}-${selectedDay}`;
     }
 
     if (periodType === "monthly") {
-      if (!periodLabel) return "";
+      if (!selectedMonth || !selectedYear) {
+        return "";
+      }
 
-      return `${periodLabel}-01`;
+      return `${selectedYear}-${selectedMonth}`;
     }
 
     if (periodType === "yearly") {
-      if (!periodLabel) return "";
+      if (!selectedYear) {
+        return "";
+      }
 
-      return `${periodLabel}-01-01`;
+      return selectedYear;
     }
 
     return "";
@@ -81,23 +173,24 @@ export default function InputPage() {
   async function saveData(e) {
     e.preventDefault();
 
-    if (periodType === "daily" && !recordDate) {
-      setMessage("⚠️ กรุณาเลือกวันที่");
-      return;
-    }
+    const finalRecordDate = getRecordDate();
+    const finalPeriodLabel = getPeriodLabel();
 
-    if (
-      (periodType === "monthly" || periodType === "yearly") &&
-      !periodLabel
-    ) {
-      setMessage("⚠️ กรุณาเลือกช่วงเวลา");
+    // ตรวจสอบช่วงเวลา
+    if (!finalRecordDate || !finalPeriodLabel) {
+      if (periodType === "daily") {
+        setMessage("⚠️ กรุณาเลือก วัน เดือน และปี");
+      } else if (periodType === "monthly") {
+        setMessage("⚠️ กรุณาเลือก เดือน และปี");
+      } else {
+        setMessage("⚠️ กรุณาเลือกปี");
+      }
+
       return;
     }
 
     setSaving(true);
     setMessage("กำลังบันทึก...");
-
-    const finalRecordDate = getRecordDate();
 
     // 1. สร้างรายการหลัก
     const { data: energyData, error: energyError } = await supabase
@@ -106,7 +199,7 @@ export default function InputPage() {
         {
           record_date: finalRecordDate,
           period_type: periodType,
-          period_label: periodLabel || null,
+          period_label: finalPeriodLabel,
           note: note,
         },
       ])
@@ -118,6 +211,7 @@ export default function InputPage() {
         "❌ บันทึกข้อมูลหลักไม่สำเร็จ: " +
           energyError.message
       );
+
       setSaving(false);
       return;
     }
@@ -139,6 +233,7 @@ export default function InputPage() {
         "⚠️ สร้างรายการแล้ว แต่บันทึกค่าพลังงานไม่สำเร็จ: " +
           valuesError.message
       );
+
       setSaving(false);
       return;
     }
@@ -146,8 +241,9 @@ export default function InputPage() {
     setMessage("✅ บันทึกข้อมูลสำเร็จ");
 
     // ล้างข้อมูล
-    setRecordDate("");
-    setPeriodLabel("");
+    setSelectedDay("");
+    setSelectedMonth("");
+    setSelectedYear("");
     setNote("");
 
     const emptyValues = {};
@@ -159,6 +255,16 @@ export default function InputPage() {
     setValues(emptyValues);
 
     setSaving(false);
+  }
+
+  // เปลี่ยนประเภทข้อมูล
+  function changePeriodType(type) {
+    setPeriodType(type);
+
+    // ล้างเฉพาะตัวเลือกช่วงเวลา
+    setSelectedDay("");
+    setSelectedMonth("");
+    setSelectedYear("");
   }
 
   if (loading) {
@@ -221,11 +327,9 @@ export default function InputPage() {
 
               <select
                 value={periodType}
-                onChange={(e) => {
-                  setPeriodType(e.target.value);
-                  setRecordDate("");
-                  setPeriodLabel("");
-                }}
+                onChange={(e) =>
+                  changePeriodType(e.target.value)
+                }
                 style={inputStyle}
               >
                 <option value="daily">
@@ -245,61 +349,192 @@ export default function InputPage() {
             {/* ช่วงเวลา */}
             <div style={{ marginTop: "20px" }}>
 
+              {/* ================= รายวัน ================= */}
               {periodType === "daily" && (
-                <>
-                  <label style={labelStyle}>
-                    วันที่
-                  </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(3, 1fr)",
+                    gap: "15px",
+                  }}
+                >
+                  {/* วัน */}
+                  <div>
+                    <label style={labelStyle}>
+                      วัน
+                    </label>
 
-                  <input
-                    type="date"
-                    value={recordDate}
-                    onChange={(e) =>
-                      setRecordDate(e.target.value)
-                    }
-                    style={inputStyle}
-                    required
-                  />
-                </>
+                    <select
+                      value={selectedDay}
+                      onChange={(e) =>
+                        setSelectedDay(e.target.value)
+                      }
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">
+                        เลือกวัน
+                      </option>
+
+                      {days.map((day) => (
+                        <option key={day} value={day}>
+                          {Number(day)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* เดือน */}
+                  <div>
+                    <label style={labelStyle}>
+                      เดือน
+                    </label>
+
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) =>
+                        setSelectedMonth(e.target.value)
+                      }
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">
+                        เลือกเดือน
+                      </option>
+
+                      {months.map((month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* ปี */}
+                  <div>
+                    <label style={labelStyle}>
+                      ปี
+                    </label>
+
+                    <select
+                      value={selectedYear}
+                      onChange={(e) =>
+                        setSelectedYear(e.target.value)
+                      }
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">
+                        เลือกปี
+                      </option>
+
+                      {years.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               )}
 
+              {/* ================= รายเดือน ================= */}
               {periodType === "monthly" && (
-                <>
-                  <label style={labelStyle}>
-                    เดือน
-                  </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(2, 1fr)",
+                    gap: "15px",
+                  }}
+                >
+                  {/* เดือน */}
+                  <div>
+                    <label style={labelStyle}>
+                      เดือน
+                    </label>
 
-                  <input
-                    type="month"
-                    value={periodLabel}
-                    onChange={(e) =>
-                      setPeriodLabel(e.target.value)
-                    }
-                    style={inputStyle}
-                    required
-                  />
-                </>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) =>
+                        setSelectedMonth(e.target.value)
+                      }
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">
+                        เลือกเดือน
+                      </option>
+
+                      {months.map((month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* ปี */}
+                  <div>
+                    <label style={labelStyle}>
+                      ปี
+                    </label>
+
+                    <select
+                      value={selectedYear}
+                      onChange={(e) =>
+                        setSelectedYear(e.target.value)
+                      }
+                      style={inputStyle}
+                      required
+                    >
+                      <option value="">
+                        เลือกปี
+                      </option>
+
+                      {years.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               )}
 
+              {/* ================= รายปี ================= */}
               {periodType === "yearly" && (
-                <>
+                <div>
                   <label style={labelStyle}>
                     ปี
                   </label>
 
-                  <input
-                    type="number"
-                    min="2000"
-                    max="2100"
-                    value={periodLabel}
+                  <select
+                    value={selectedYear}
                     onChange={(e) =>
-                      setPeriodLabel(e.target.value)
+                      setSelectedYear(e.target.value)
                     }
-                    placeholder="เช่น 2026"
                     style={inputStyle}
                     required
-                  />
-                </>
+                  >
+                    <option value="">
+                      เลือกปี
+                    </option>
+
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
