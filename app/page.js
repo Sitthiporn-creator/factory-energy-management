@@ -30,7 +30,12 @@ function getEnergyIcon(name = "") {
   if (text.includes("ไฟฟ้า") || text.includes("electric")) return "⚡";
   if (text.includes("solar") || text.includes("แสงอาทิตย์")) return "☀️";
   if (text.includes("gas") || text.includes("ก๊าซ")) return "🔥";
-  if (text.includes("น้ำมัน") || text.includes("fuel") || text.includes("oil")) return "⛽";
+  if (
+    text.includes("น้ำมัน") ||
+    text.includes("fuel") ||
+    text.includes("oil")
+  )
+    return "⛽";
   if (text.includes("steam") || text.includes("ไอน้ำ")) return "♨️";
   if (text.includes("น้ำ") || text.includes("water")) return "💧";
   if (text.includes("ลม") || text.includes("wind")) return "🌬️";
@@ -61,6 +66,15 @@ const months = [
 ];
 
 /* =========================================================
+   DAYS
+========================================================= */
+
+const days = Array.from(
+  { length: 31 },
+  (_, index) => String(index + 1).padStart(2, "0")
+);
+
+/* =========================================================
    DASHBOARD
 ========================================================= */
 
@@ -69,21 +83,46 @@ export default function Dashboard() {
   const [records, setRecords] = useState([]);
   const [energyValues, setEnergyValues] = useState([]);
 
+  /* =======================================================
+     MAIN ANALYSIS
+  ======================================================= */
+
   const [selectedEnergy, setSelectedEnergy] = useState("");
   const [viewType, setViewType] = useState("daily");
   const [chartType, setChartType] = useState("line");
 
-  /* Main chart selections */
-  const [selectedDays, setSelectedDays] = useState([]);
-  const [selectedMonths, setSelectedMonths] = useState([]);
-  const [selectedYears, setSelectedYears] = useState([]);
+  const [selectedDay, setSelectedDay] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
 
-  /* Comparison */
-  const [comparisonType, setComparisonType] = useState("monthly");
-  const [comparisonChartType, setComparisonChartType] = useState("line");
-  const [comparisonMonths, setComparisonMonths] = useState([]);
-  const [comparisonYears, setComparisonYears] = useState([]);
-  const [comparisonDays, setComparisonDays] = useState([]);
+  /* =======================================================
+     OVERVIEW FILTER
+  ======================================================= */
+
+  const [overviewMonth, setOverviewMonth] = useState("");
+  const [overviewYear, setOverviewYear] = useState("");
+
+  /* =======================================================
+     COMPARISON
+  ======================================================= */
+
+  const [comparisonType, setComparisonType] =
+    useState("monthly");
+
+  const [comparisonChartType, setComparisonChartType] =
+    useState("line");
+
+  const [comparisonMonth, setComparisonMonth] =
+    useState("");
+
+  const [comparisonDay, setComparisonDay] =
+    useState("");
+
+  const [comparisonYear, setComparisonYear] =
+    useState("");
+
+  const [comparisonYear2, setComparisonYear2] =
+    useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -129,9 +168,10 @@ export default function Dashboard() {
     setRecords(dataRows || []);
     setEnergyValues(valueRows || []);
 
-    if (types?.length > 0) {
+    if (types && types.length > 0) {
       setSelectedEnergy(
-        (current) => current || types[0].energy_key
+        (current) =>
+          current || types[0].energy_key
       );
     }
 
@@ -155,9 +195,9 @@ export default function Dashboard() {
       return Number(dynamicValue.value) || 0;
     }
 
-    return Number(
-      row[energyType.energy_key]
-    ) || 0;
+    return (
+      Number(row[energyType.energy_key]) || 0
+    );
   }
 
   /* =========================================================
@@ -191,7 +231,9 @@ export default function Dashboard() {
         }
 
         if (/^\d{4}-\d{2}/.test(text)) {
-          years.add(text.substring(0, 4));
+          years.add(
+            text.substring(0, 4)
+          );
         }
       }
     });
@@ -213,14 +255,144 @@ export default function Dashboard() {
   }, [records]);
 
   /* =========================================================
-     AVAILABLE DAYS
+     DEFAULT FILTERS
   ========================================================= */
 
-  const days = Array.from(
-    { length: 31 },
-    (_, index) =>
-      String(index + 1).padStart(2, "0")
-  );
+  useEffect(() => {
+    const currentDate = new Date();
+
+    const currentMonth =
+      String(
+        currentDate.getMonth() + 1
+      ).padStart(2, "0");
+
+    const currentDay =
+      String(
+        currentDate.getDate()
+      ).padStart(2, "0");
+
+    if (!selectedMonth) {
+      setSelectedMonth(currentMonth);
+    }
+
+    if (!selectedDay) {
+      setSelectedDay(currentDay);
+    }
+
+    if (
+      availableYears.length > 0 &&
+      !selectedYear
+    ) {
+      setSelectedYear(
+        availableYears[
+          availableYears.length - 1
+        ]
+      );
+    }
+
+    if (!overviewMonth) {
+      setOverviewMonth(currentMonth);
+    }
+
+    if (
+      availableYears.length > 0 &&
+      !overviewYear
+    ) {
+      setOverviewYear(
+        availableYears[
+          availableYears.length - 1
+        ]
+      );
+    }
+
+    if (!comparisonMonth) {
+      setComparisonMonth(currentMonth);
+    }
+
+    if (!comparisonDay) {
+      setComparisonDay(currentDay);
+    }
+
+    if (
+      availableYears.length > 0 &&
+      !comparisonYear
+    ) {
+      setComparisonYear(
+        availableYears[
+          availableYears.length - 1
+        ]
+      );
+    }
+
+    if (
+      availableYears.length > 1 &&
+      !comparisonYear2
+    ) {
+      setComparisonYear2(
+        availableYears[
+          availableYears.length - 2
+        ]
+      );
+    }
+  }, [
+    availableYears,
+    selectedMonth,
+    selectedDay,
+    selectedYear,
+    overviewMonth,
+    overviewYear,
+    comparisonMonth,
+    comparisonDay,
+    comparisonYear,
+    comparisonYear2,
+  ]);
+
+  /* =========================================================
+     OVERVIEW SUMMARY
+  ========================================================= */
+
+  const overviewSummary = useMemo(() => {
+    return energyTypes.map((type) => {
+      let total = 0;
+
+      records.forEach((row) => {
+        const date =
+          row.record_date || "";
+
+        const year =
+          date.substring(0, 4);
+
+        const month =
+          date.substring(5, 7);
+
+        /*
+          ใช้ข้อมูล Monthly เป็นหลัก
+        */
+
+        if (
+          row.period_type === "monthly" &&
+          year === overviewYear &&
+          month === overviewMonth
+        ) {
+          total += getEnergyValue(
+            row,
+            type
+          );
+        }
+      });
+
+      return {
+        ...type,
+        total,
+      };
+    });
+  }, [
+    records,
+    energyTypes,
+    energyValues,
+    overviewMonth,
+    overviewYear,
+  ]);
 
   /* =========================================================
      MAIN FILTERED RECORDS
@@ -249,16 +421,16 @@ export default function Dashboard() {
           date.substring(8, 10);
 
         if (
-          selectedYears.length > 0 &&
-          !selectedYears.includes(year)
+          selectedYear &&
+          year !== selectedYear
         ) {
           return false;
         }
 
         if (
           viewType === "monthly" &&
-          selectedMonths.length > 0 &&
-          !selectedMonths.includes(month)
+          selectedMonth &&
+          month !== selectedMonth
         ) {
           return false;
         }
@@ -267,15 +439,15 @@ export default function Dashboard() {
           viewType === "daily"
         ) {
           if (
-            selectedMonths.length > 0 &&
-            !selectedMonths.includes(month)
+            selectedMonth &&
+            month !== selectedMonth
           ) {
             return false;
           }
 
           if (
-            selectedDays.length > 0 &&
-            !selectedDays.includes(day)
+            selectedDay &&
+            day !== selectedDay
           ) {
             return false;
           }
@@ -291,59 +463,68 @@ export default function Dashboard() {
   }, [
     records,
     viewType,
-    selectedDays,
-    selectedMonths,
-    selectedYears,
+    selectedDay,
+    selectedMonth,
+    selectedYear,
   ]);
 
   /* =========================================================
      MAIN CHART DATA
-========================================================= */
+  ========================================================= */
 
   const chartData = useMemo(() => {
     if (!selectedType) return [];
 
-    return filteredRecords.map((row) => {
-      const date =
-        row.record_date || "";
+    return filteredRecords.map(
+      (row) => {
+        const date =
+          row.record_date || "";
 
-      let label = date;
+        let label = date;
 
-      if (viewType === "daily") {
-        label = date;
+        if (
+          viewType === "daily"
+        ) {
+          label = date;
+        }
+
+        if (
+          viewType === "monthly"
+        ) {
+          const month =
+            date.substring(5, 7);
+
+          const year =
+            date.substring(0, 4);
+
+          const monthName =
+            months.find(
+              (item) =>
+                item.value === month
+            )?.label || month;
+
+          label =
+            `${monthName} ${year}`;
+        }
+
+        if (
+          viewType === "yearly"
+        ) {
+          label =
+            row.period_label ||
+            date.substring(0, 4);
+        }
+
+        return {
+          label,
+          value:
+            getEnergyValue(
+              row,
+              selectedType
+            ),
+        };
       }
-
-      if (viewType === "monthly") {
-        const month =
-          date.substring(5, 7);
-
-        const year =
-          date.substring(0, 4);
-
-        const monthName =
-          months.find(
-            (item) =>
-              item.value === month
-          )?.label || month;
-
-        label =
-          `${monthName} ${year}`;
-      }
-
-      if (viewType === "yearly") {
-        label =
-          row.period_label ||
-          date.substring(0, 4);
-      }
-
-      return {
-        label,
-        value: getEnergyValue(
-          row,
-          selectedType
-        ),
-      };
-    });
+    );
   }, [
     filteredRecords,
     selectedType,
@@ -352,217 +533,190 @@ export default function Dashboard() {
   ]);
 
   /* =========================================================
-     SUMMARY
-========================================================= */
-
-  const summary = useMemo(() => {
-    return energyTypes.map((type) => {
-      let total = 0;
-
-      records.forEach((row) => {
-        total += getEnergyValue(
-          row,
-          type
-        );
-      });
-
-      return {
-        ...type,
-        total,
-      };
-    });
-  }, [
-    records,
-    energyTypes,
-    energyValues,
-  ]);
-
-  /* =========================================================
      COMPARISON DATA
-========================================================= */
+  ========================================================= */
 
-  const comparisonData = useMemo(() => {
-    if (!selectedType) return [];
+  const comparisonData =
+    useMemo(() => {
+      if (!selectedType) return [];
 
-    /* =========================================
-       MONTHLY
-    ========================================= */
-
-    if (
-      comparisonType === "monthly"
-    ) {
-      const result = {};
-
-      const years =
-        comparisonYears.length > 0
-          ? comparisonYears
-          : availableYears;
-
-      const monthsToUse =
-        comparisonMonths.length > 0
-          ? comparisonMonths
-          : months.map(
-              (item) => item.value
-            );
-
-      monthsToUse.forEach(
-        (monthValue) => {
-          const monthName =
-            months.find(
-              (item) =>
-                item.value ===
-                monthValue
-            )?.label ||
-            monthValue;
-
-          const item = {
-            label: monthName,
-          };
-
-          years.forEach((year) => {
-            const matchingRows =
-              records.filter((row) => {
-                const date =
-                  row.record_date ||
-                  "";
-
-                const rowYear =
-                  date.substring(0, 4);
-
-                const rowMonth =
-                  date.substring(5, 7);
-
-                return (
-                  row.period_type ===
-                    "monthly" &&
-                  rowYear === year &&
-                  rowMonth ===
-                    monthValue
-                );
-              });
-
-            item[`year_${year}`] =
-              matchingRows.reduce(
-                (sum, row) =>
-                  sum +
-                  getEnergyValue(
-                    row,
-                    selectedType
-                  ),
-                0
-              );
-          });
-
-          result[monthValue] =
-            item;
-        }
+      const years = [
+        comparisonYear,
+        comparisonYear2,
+      ].filter(
+        (year, index, array) =>
+          year &&
+          array.indexOf(year) === index
       );
 
-      return Object.values(result);
-    }
+      /* =========================================
+         MONTHLY
+      ========================================= */
 
-    /* =========================================
-       YEARLY
-    ========================================= */
+      if (
+        comparisonType ===
+        "monthly"
+      ) {
+        return months.map(
+          (month) => {
+            const item = {
+              label: month.label,
+            };
 
-    if (
-      comparisonType === "yearly"
-    ) {
-      const years =
-        comparisonYears.length > 0
-          ? comparisonYears
-          : availableYears;
+            years.forEach(
+              (year) => {
+                const matchingRows =
+                  records.filter(
+                    (row) => {
+                      const date =
+                        row.record_date ||
+                        "";
 
-      return years.map((year) => {
-        const matchingRows =
-          records.filter((row) => {
-            const date =
-              row.record_date || "";
+                      return (
+                        row.period_type ===
+                          "monthly" &&
+                        date.substring(
+                          0,
+                          4
+                        ) === year &&
+                        date.substring(
+                          5,
+                          7
+                        ) ===
+                          month.value
+                      );
+                    }
+                  );
 
-            return (
-              row.period_type ===
-                "yearly" &&
-              date.substring(0, 4) ===
-                year
+                item[
+                  `year_${year}`
+                ] =
+                  matchingRows.reduce(
+                    (
+                      sum,
+                      row
+                    ) =>
+                      sum +
+                      getEnergyValue(
+                        row,
+                        selectedType
+                      ),
+                    0
+                  );
+              }
             );
-          });
 
-        return {
-          label: year,
-          value:
-            matchingRows.reduce(
-              (sum, row) =>
-                sum +
-                getEnergyValue(
-                  row,
-                  selectedType
+            return item;
+          }
+        );
+      }
+
+      /* =========================================
+         YEARLY
+      ========================================= */
+
+      if (
+        comparisonType ===
+        "yearly"
+      ) {
+        return years.map(
+          (year) => {
+            const matchingRows =
+              records.filter(
+                (row) => {
+                  const date =
+                    row.record_date ||
+                    "";
+
+                  return (
+                    row.period_type ===
+                      "yearly" &&
+                    date.substring(
+                      0,
+                      4
+                    ) === year
+                  );
+                }
+              );
+
+            return {
+              label: year,
+              value:
+                matchingRows.reduce(
+                  (
+                    sum,
+                    row
+                  ) =>
+                    sum +
+                    getEnergyValue(
+                      row,
+                      selectedType
+                    ),
+                  0
                 ),
-              0
-            ),
+            };
+          }
+        );
+      }
+
+      /* =========================================
+         DAILY
+      ========================================= */
+
+      if (
+        comparisonType ===
+        "daily"
+      ) {
+        const item = {
+          label:
+            `${comparisonDay} ${
+              months.find(
+                (month) =>
+                  month.value ===
+                  comparisonMonth
+              )?.label ||
+              ""
+            }`,
         };
-      });
-    }
 
-    /* =========================================
-       DAILY
-    ========================================= */
-
-    if (
-      comparisonType === "daily"
-    ) {
-      const years =
-        comparisonYears.length > 0
-          ? comparisonYears
-          : availableYears;
-
-      const selectedMonth =
-        comparisonMonths[0] ||
-        "01";
-
-      const selectedDaysForComparison =
-        comparisonDays.length > 0
-          ? comparisonDays
-          : days;
-
-      const result = [];
-
-      selectedDaysForComparison.forEach(
-        (day) => {
-          const monthName =
-            months.find(
-              (item) =>
-                item.value ===
-                selectedMonth
-            )?.label ||
-            selectedMonth;
-
-          const item = {
-            label:
-              `${day} ${monthName}`,
-          };
-
-          years.forEach((year) => {
+        years.forEach(
+          (year) => {
             const matchingRows =
-              records.filter((row) => {
-                const date =
-                  row.record_date ||
-                  "";
+              records.filter(
+                (row) => {
+                  const date =
+                    row.record_date ||
+                    "";
 
-                return (
-                  row.period_type ===
-                    "daily" &&
-                  date.substring(0, 4) ===
-                    year &&
-                  date.substring(5, 7) ===
-                    selectedMonth &&
-                  date.substring(8, 10) ===
-                    day
-                );
-              });
+                  return (
+                    row.period_type ===
+                      "daily" &&
+                    date.substring(
+                      0,
+                      4
+                    ) === year &&
+                    date.substring(
+                      5,
+                      7
+                    ) ===
+                      comparisonMonth &&
+                    date.substring(
+                      8,
+                      10
+                    ) ===
+                      comparisonDay
+                  );
+                }
+              );
 
-            item[`year_${year}`] =
+            item[
+              `year_${year}`
+            ] =
               matchingRows.reduce(
-                (sum, row) =>
+                (
+                  sum,
+                  row
+                ) =>
                   sum +
                   getEnergyValue(
                     row,
@@ -570,73 +724,41 @@ export default function Dashboard() {
                   ),
                 0
               );
-          });
+          }
+        );
 
-          result.push(item);
-        }
-      );
+        return [item];
+      }
 
-      return result;
-    }
-
-    return [];
-  }, [
-    records,
-    selectedType,
-    comparisonType,
-    comparisonMonths,
-    comparisonYears,
-    comparisonDays,
-    availableYears,
-    energyValues,
-  ]);
+      return [];
+    }, [
+      records,
+      selectedType,
+      comparisonType,
+      comparisonMonth,
+      comparisonDay,
+      comparisonYear,
+      comparisonYear2,
+      energyValues,
+    ]);
 
   /* =========================================================
      COMPARISON YEARS
-========================================================= */
+  ========================================================= */
 
   const comparisonYearsToShow =
-    comparisonYears.length > 0
-      ? comparisonYears
-      : availableYears;
-
-  /* =========================================================
-     TOGGLE HELPERS
-========================================================= */
-
-  function toggleItem(
-    value,
-    current,
-    setter
-  ) {
-    if (current.includes(value)) {
-      setter(
-        current.filter(
-          (item) => item !== value
-        )
-      );
-    } else {
-      setter([
-        ...current,
-        value,
-      ]);
-    }
-  }
-
-  function selectAll(
-    values,
-    setter
-  ) {
-    setter([...values]);
-  }
-
-  function clearAll(setter) {
-    setter([]);
-  }
+    [
+      comparisonYear,
+      comparisonYear2,
+    ].filter(
+      (year, index, array) =>
+        year &&
+        array.indexOf(year) === index
+    );
 
   /* =========================================================
      LOADING
-========================================================= */
+  ========================================================= */
 
   if (loading) {
     return (
@@ -658,7 +780,7 @@ export default function Dashboard() {
 
   /* =========================================================
      PAGE
-========================================================= */
+  ========================================================= */
 
   return (
     <>
@@ -670,6 +792,7 @@ export default function Dashboard() {
 
         body {
           margin: 0;
+
           font-family:
             Inter,
             "Noto Sans Thai",
@@ -722,6 +845,10 @@ export default function Dashboard() {
           margin: auto;
         }
 
+        /* ==============================
+           HEADER
+        ============================== */
+
         .header {
           position: relative;
           overflow: hidden;
@@ -743,7 +870,12 @@ export default function Dashboard() {
 
           box-shadow:
             0 15px 40px
-            rgba(15, 23, 42, 0.18);
+            rgba(
+              15,
+              23,
+              42,
+              0.18
+            );
         }
 
         .headerGlow {
@@ -755,7 +887,12 @@ export default function Dashboard() {
           border-radius: 50%;
 
           background:
-            rgba(59, 130, 246, 0.15);
+            rgba(
+              59,
+              130,
+              246,
+              0.15
+            );
 
           right: -80px;
           top: -120px;
@@ -768,7 +905,9 @@ export default function Dashboard() {
 
         .headerTitle {
           display: flex;
+
           align-items: center;
+
           gap: 15px;
         }
 
@@ -779,10 +918,17 @@ export default function Dashboard() {
           border-radius: 16px;
 
           background:
-            rgba(255,255,255,0.12);
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
 
           display: flex;
+
           align-items: center;
+
           justify-content: center;
 
           font-size: 30px;
@@ -806,6 +952,7 @@ export default function Dashboard() {
 
         .headerButtons {
           display: flex;
+
           flex-wrap: wrap;
 
           gap: 10px;
@@ -816,18 +963,29 @@ export default function Dashboard() {
         .headerButton {
           text-decoration: none;
 
-          padding: 11px 17px;
+          padding:
+            11px 17px;
 
           border-radius: 11px;
 
           background:
-            rgba(255,255,255,0.1);
+            rgba(
+              255,
+              255,
+              255,
+              0.1
+            );
 
           color: white;
 
           border:
             1px solid
-            rgba(255,255,255,0.15);
+            rgba(
+              255,
+              255,
+              255,
+              0.15
+            );
 
           transition: 0.2s;
 
@@ -836,7 +994,12 @@ export default function Dashboard() {
 
         .headerButton:hover {
           background:
-            rgba(255,255,255,0.2);
+            rgba(
+              255,
+              255,
+              255,
+              0.2
+            );
 
           transform:
             translateY(-1px);
@@ -844,9 +1007,15 @@ export default function Dashboard() {
 
         .headerButton.primary {
           background: white;
+
           color: #172033;
+
           font-weight: 600;
         }
+
+        /* ==============================
+           SECTION
+        ============================== */
 
         .sectionTitle {
           display: flex;
@@ -872,13 +1041,40 @@ export default function Dashboard() {
           color: #718096;
         }
 
+        /* ==============================
+           OVERVIEW FILTER
+        ============================== */
+
+        .overviewTools {
+          display: flex;
+
+          align-items: center;
+
+          gap: 8px;
+
+          flex-wrap: wrap;
+        }
+
+        .overviewTools .select {
+          width: auto;
+
+          min-width: 145px;
+        }
+
+        /* ==============================
+           SUMMARY
+        ============================== */
+
         .summaryGrid {
           display: grid;
 
           grid-template-columns:
             repeat(
               auto-fit,
-              minmax(210px, 1fr)
+              minmax(
+                210px,
+                1fr
+              )
             );
 
           gap: 16px;
@@ -886,21 +1082,27 @@ export default function Dashboard() {
 
         .summaryCard {
           position: relative;
+
           overflow: hidden;
 
           background: white;
-
-          border-radius: 18px;
-
-          padding: 20px;
 
           border:
             1px solid
             #e8edf5;
 
+          border-radius: 18px;
+
+          padding: 20px;
+
           box-shadow:
             0 5px 20px
-            rgba(15, 23, 42, 0.05);
+            rgba(
+              15,
+              23,
+              42,
+              0.05
+            );
 
           transition: 0.2s;
         }
@@ -911,7 +1113,12 @@ export default function Dashboard() {
 
           box-shadow:
             0 10px 28px
-            rgba(15, 23, 42, 0.09);
+            rgba(
+              15,
+              23,
+              42,
+              0.09
+            );
         }
 
         .summaryTop {
@@ -942,6 +1149,7 @@ export default function Dashboard() {
           display: flex;
 
           align-items: center;
+
           justify-content: center;
 
           font-size: 23px;
@@ -966,7 +1174,7 @@ export default function Dashboard() {
         }
 
         /* ==============================
-           FILTER CARD
+           FILTER
         ============================== */
 
         .filterCard {
@@ -990,11 +1198,17 @@ export default function Dashboard() {
 
           box-shadow:
             0 5px 20px
-            rgba(15, 23, 42, 0.04);
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
         .filterGroup {
           min-width: 190px;
+
           flex: 1;
         }
 
@@ -1013,7 +1227,8 @@ export default function Dashboard() {
         .select {
           width: 100%;
 
-          padding: 11px 14px;
+          padding:
+            11px 14px;
 
           border:
             1px solid
@@ -1026,22 +1241,31 @@ export default function Dashboard() {
           color: #172033;
 
           outline: none;
+
+          cursor: pointer;
         }
 
         .select:focus {
-          border-color: #3b82f6;
+          border-color:
+            #3b82f6;
 
           box-shadow:
             0 0 0 3px
-            rgba(59,130,246,0.1);
+            rgba(
+              59,
+              130,
+              246,
+              0.1
+            );
         }
 
         /* ==============================
-           MULTI SELECT
+           SELECTION
         ============================== */
 
         .selectionCard {
-          background: #f8fafc;
+          background:
+            #f8fafc;
 
           border:
             1px solid
@@ -1052,98 +1276,32 @@ export default function Dashboard() {
           padding: 16px;
 
           margin-top: 14px;
-        }
 
-        .selectionHeader {
           display: flex;
 
-          justify-content:
-            space-between;
-
-          align-items: center;
-
-          gap: 10px;
-
-          margin-bottom: 12px;
-
           flex-wrap: wrap;
+
+          gap: 12px;
+
+          align-items: flex-end;
         }
 
-        .selectionTitle {
-          font-size: 13px;
+        .selectionGroup {
+          flex: 1;
+
+          min-width: 180px;
+        }
+
+        .selectionLabel {
+          display: block;
+
+          font-size: 12px;
 
           font-weight: 700;
 
-          color: #334155;
-        }
-
-        .selectionActions {
-          display: flex;
-
-          gap: 6px;
-        }
-
-        .smallButton {
-          border:
-            1px solid
-            #dbe3ef;
-
-          background: white;
-
           color: #475569;
 
-          padding: 6px 10px;
-
-          border-radius: 8px;
-
-          cursor: pointer;
-
-          font-size: 12px;
-        }
-
-        .smallButton:hover {
-          background: #eff6ff;
-          color: #2563eb;
-        }
-
-        .optionGrid {
-          display: flex;
-
-          flex-wrap: wrap;
-
-          gap: 8px;
-        }
-
-        .optionButton {
-          border:
-            1px solid
-            #dbe3ef;
-
-          background: white;
-
-          color: #64748b;
-
-          padding: 8px 12px;
-
-          border-radius: 9px;
-
-          cursor: pointer;
-
-          font-size: 12px;
-
-          transition: 0.15s;
-        }
-
-        .optionButton:hover {
-          border-color: #93c5fd;
-        }
-
-        .optionButton.active {
-          background: #2563eb;
-
-          color: white;
-
-          border-color: #2563eb;
+          margin-bottom: 7px;
         }
 
         /* ==============================
@@ -1165,7 +1323,12 @@ export default function Dashboard() {
 
           box-shadow:
             0 5px 20px
-            rgba(15, 23, 42, 0.04);
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
         .chartHeader {
@@ -1192,7 +1355,8 @@ export default function Dashboard() {
 
           color: #2563eb;
 
-          padding: 6px 10px;
+          padding:
+            6px 10px;
 
           border-radius: 8px;
 
@@ -1205,7 +1369,9 @@ export default function Dashboard() {
 
         .chart {
           width: 100%;
+
           height: 380px;
+
           min-height: 380px;
         }
 
@@ -1221,6 +1387,7 @@ export default function Dashboard() {
 
         .chartTools .select {
           width: auto;
+
           min-width: 145px;
         }
 
@@ -1239,7 +1406,8 @@ export default function Dashboard() {
 
           color: #94a3b8;
 
-          background: #f8fafc;
+          background:
+            #f8fafc;
 
           border-radius: 12px;
         }
@@ -1269,7 +1437,12 @@ export default function Dashboard() {
 
           box-shadow:
             0 5px 20px
-            rgba(15, 23, 42, 0.04);
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
         .tableWrapper {
@@ -1286,7 +1459,8 @@ export default function Dashboard() {
         }
 
         th {
-          background: #f8fafc;
+          background:
+            #f8fafc;
 
           color: #475569;
 
@@ -1316,7 +1490,8 @@ export default function Dashboard() {
         }
 
         tr:hover td {
-          background: #f8fbff;
+          background:
+            #f8fbff;
         }
 
         .empty {
@@ -1334,7 +1509,8 @@ export default function Dashboard() {
 
           font-size: 12px;
 
-          padding: 30px 0 10px;
+          padding:
+            30px 0 10px;
         }
 
         @media (max-width: 700px) {
@@ -1355,7 +1531,10 @@ export default function Dashboard() {
 
           .summaryGrid {
             grid-template-columns:
-              repeat(2, 1fr);
+              repeat(
+                2,
+                1fr
+              );
           }
 
           .summaryCard {
@@ -1368,6 +1547,13 @@ export default function Dashboard() {
 
           .filterGroup {
             width: 100%;
+
+            min-width: 100%;
+          }
+
+          .selectionGroup {
+            width: 100%;
+
             min-width: 100%;
           }
 
@@ -1377,9 +1563,11 @@ export default function Dashboard() {
           }
 
           .chartHeader {
-            align-items: flex-start;
+            align-items:
+              flex-start;
 
-            flex-direction: column;
+            flex-direction:
+              column;
           }
 
           .chartTools {
@@ -1390,6 +1578,13 @@ export default function Dashboard() {
             width: 100%;
           }
 
+          .overviewTools {
+            width: 100%;
+          }
+
+          .overviewTools .select {
+            width: 100%;
+          }
         }
 
       `}</style>
@@ -1458,7 +1653,7 @@ export default function Dashboard() {
           </section>
 
           {/* =================================================
-              SUMMARY
+              OVERVIEW
           ================================================= */}
 
           <div className="sectionTitle">
@@ -1467,46 +1662,94 @@ export default function Dashboard() {
               ภาพรวมการใช้พลังงาน
             </h2>
 
-            <span>
-              ข้อมูลทั้งหมด
-            </span>
+            <div className="overviewTools">
+
+              <select
+                className="select"
+                value={overviewMonth}
+                onChange={(e) =>
+                  setOverviewMonth(
+                    e.target.value
+                  )
+                }
+              >
+
+                {months.map(
+                  (month) => (
+                    <option
+                      key={month.value}
+                      value={month.value}
+                    >
+                      {month.label}
+                    </option>
+                  )
+                )}
+
+              </select>
+
+              <select
+                className="select"
+                value={overviewYear}
+                onChange={(e) =>
+                  setOverviewYear(
+                    e.target.value
+                  )
+                }
+              >
+
+                {availableYears.map(
+                  (year) => (
+                    <option
+                      key={year}
+                      value={year}
+                    >
+                      {year}
+                    </option>
+                  )
+                )}
+
+              </select>
+
+            </div>
 
           </div>
 
           <section className="summaryGrid">
 
-            {summary.map((item) => (
+            {overviewSummary.map(
+              (item) => (
 
-              <div
-                className="summaryCard"
-                key={item.id}
-              >
+                <div
+                  className="summaryCard"
+                  key={item.id}
+                >
 
-                <div className="summaryTop">
+                  <div className="summaryTop">
 
-                  <div className="summaryName">
-                    {item.energy_name}
+                    <div className="summaryName">
+                      {item.energy_name}
+                    </div>
+
+                    <div className="summaryIcon">
+                      {getEnergyIcon(
+                        item.energy_name
+                      )}
+                    </div>
+
                   </div>
 
-                  <div className="summaryIcon">
-                    {getEnergyIcon(
-                      item.energy_name
-                    )}
+                  <div className="summaryValue">
+                    {item.total.toLocaleString()}
+                  </div>
+
+                  <div className="summaryUnit">
+                    {item.unit}
                   </div>
 
                 </div>
 
-                <div className="summaryValue">
-                  {item.total.toLocaleString()}
-                </div>
-
-                <div className="summaryUnit">
-                  {item.unit}
-                </div>
-
-              </div>
-
-            ))}
+              )
+            )}
 
           </section>
 
@@ -1542,19 +1785,21 @@ export default function Dashboard() {
                 }
               >
 
-                {energyTypes.map((item) => (
+                {energyTypes.map(
+                  (item) => (
 
-                  <option
-                    key={item.id}
-                    value={item.energy_key}
-                  >
-                    {getEnergyIcon(
-                      item.energy_name
-                    )}{" "}
-                    {item.energy_name}
-                  </option>
+                    <option
+                      key={item.id}
+                      value={item.energy_key}
+                    >
+                      {getEnergyIcon(
+                        item.energy_name
+                      )}{" "}
+                      {item.energy_name}
+                    </option>
 
-                ))}
+                  )
+                )}
 
               </select>
 
@@ -1572,13 +1817,15 @@ export default function Dashboard() {
                 className="select"
                 value={viewType}
                 onChange={(e) => {
+
                   setViewType(
                     e.target.value
                   );
 
-                  setSelectedDays([]);
-                  setSelectedMonths([]);
-                  setSelectedYears([]);
+                  setSelectedDay("");
+                  setSelectedMonth("");
+                  setSelectedYear("");
+
                 }}
               >
 
@@ -1631,352 +1878,240 @@ export default function Dashboard() {
           </section>
 
           {/* =================================================
-              MAIN SELECTION
+              MAIN DROPDOWN SELECTION
           ================================================= */}
 
           <section className="selectionCard">
 
-            <div className="selectionHeader">
-
-              <div className="selectionTitle">
-
-                {viewType === "daily"
-                  ? "เลือกวันที่ / เดือน / ปี"
-                  : viewType === "monthly"
-                  ? "เลือกเดือน / ปี"
-                  : "เลือกปี"}
-
-              </div>
-
-              <div className="selectionActions">
-
-                {viewType === "daily" && (
-                  <>
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          days,
-                          setSelectedDays
-                        )
-                      }
-                    >
-                      Select All Days
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setSelectedDays
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-
-                {viewType === "monthly" && (
-                  <>
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          months.map(
-                            (item) =>
-                              item.value
-                          ),
-                          setSelectedMonths
-                        )
-                      }
-                    >
-                      Select All Months
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setSelectedMonths
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-
-                {viewType === "yearly" && (
-                  <>
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          availableYears,
-                          setSelectedYears
-                        )
-                      }
-                    >
-                      Select All Years
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setSelectedYears
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-
-              </div>
-
-            </div>
-
             {/* DAILY */}
 
             {viewType === "daily" && (
-
               <>
-                <div className="selectionTitle">
-                  Day
-                </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {days.map((day) => (
+                  <label className="selectionLabel">
+                    Day
+                  </label>
 
-                    <button
-                      key={day}
-                      className={`optionButton ${
-                        selectedDays.includes(
-                          day
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleItem(
-                          day,
-                          selectedDays,
-                          setSelectedDays
-                        )
-                      }
-                    >
-                      {day}
-                    </button>
+                  <select
+                    className="select"
+                    value={selectedDay}
+                    onChange={(e) =>
+                      setSelectedDay(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                  ))}
+                    <option value="">
+                      All Days
+                    </option>
 
-                </div>
+                    {days.map(
+                      (day) => (
+                        <option
+                          key={day}
+                          value={day}
+                        >
+                          {day}
+                        </option>
+                      )
+                    )}
 
-                <div
-                  className="selectionTitle"
-                  style={{
-                    marginTop: 16,
-                  }}
-                >
-                  Month
-                </div>
-
-                <div className="optionGrid">
-
-                  {months.map((month) => (
-
-                    <button
-                      key={month.value}
-                      className={`optionButton ${
-                        selectedMonths.includes(
-                          month.value
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleItem(
-                          month.value,
-                          selectedMonths,
-                          setSelectedMonths
-                        )
-                      }
-                    >
-                      {month.label}
-                    </button>
-
-                  ))}
+                  </select>
 
                 </div>
 
-                <div
-                  className="selectionTitle"
-                  style={{
-                    marginTop: 16,
-                  }}
-                >
-                  Year
+                <div className="selectionGroup">
+
+                  <label className="selectionLabel">
+                    Month
+                  </label>
+
+                  <select
+                    className="select"
+                    value={selectedMonth}
+                    onChange={(e) =>
+                      setSelectedMonth(
+                        e.target.value
+                      )
+                    }
+                  >
+
+                    <option value="">
+                      All Months
+                    </option>
+
+                    {months.map(
+                      (month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {availableYears.map(
-                    (year) => (
+                  <label className="selectionLabel">
+                    Year
+                  </label>
 
-                      <button
-                        key={year}
-                        className={`optionButton ${
-                          selectedYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            selectedYears,
-                            setSelectedYears
-                          )
-                        }
-                      >
-                        {year}
-                      </button>
+                  <select
+                    className="select"
+                    value={selectedYear}
+                    onChange={(e) =>
+                      setSelectedYear(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    )
-                  )}
+                    <option value="">
+                      All Years
+                    </option>
+
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
+
+                  </select>
 
                 </div>
 
               </>
-
             )}
 
             {/* MONTHLY */}
 
             {viewType === "monthly" && (
-
               <>
 
-                <div className="selectionTitle">
-                  Month
+                <div className="selectionGroup">
+
+                  <label className="selectionLabel">
+                    Month
+                  </label>
+
+                  <select
+                    className="select"
+                    value={selectedMonth}
+                    onChange={(e) =>
+                      setSelectedMonth(
+                        e.target.value
+                      )
+                    }
+                  >
+
+                    <option value="">
+                      All Months
+                    </option>
+
+                    {months.map(
+                      (month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {months.map((month) => (
+                  <label className="selectionLabel">
+                    Year
+                  </label>
 
-                    <button
-                      key={month.value}
-                      className={`optionButton ${
-                        selectedMonths.includes(
-                          month.value
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleItem(
-                          month.value,
-                          selectedMonths,
-                          setSelectedMonths
-                        )
-                      }
-                    >
-                      {month.label}
-                    </button>
+                  <select
+                    className="select"
+                    value={selectedYear}
+                    onChange={(e) =>
+                      setSelectedYear(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                  ))}
+                    <option value="">
+                      All Years
+                    </option>
 
-                </div>
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
 
-                <div
-                  className="selectionTitle"
-                  style={{
-                    marginTop: 16,
-                  }}
-                >
-                  Year
-                </div>
-
-                <div className="optionGrid">
-
-                  {availableYears.map(
-                    (year) => (
-
-                      <button
-                        key={year}
-                        className={`optionButton ${
-                          selectedYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            selectedYears,
-                            setSelectedYears
-                          )
-                        }
-                      >
-                        {year}
-                      </button>
-
-                    )
-                  )}
+                  </select>
 
                 </div>
 
               </>
-
             )}
 
             {/* YEARLY */}
 
             {viewType === "yearly" && (
 
-              <>
+              <div className="selectionGroup">
 
-                <div className="selectionTitle">
+                <label className="selectionLabel">
                   Year
-                </div>
+                </label>
 
-                <div className="optionGrid">
+                <select
+                  className="select"
+                  value={selectedYear}
+                  onChange={(e) =>
+                    setSelectedYear(
+                      e.target.value
+                    )
+                  }
+                >
+
+                  <option value="">
+                    All Years
+                  </option>
 
                   {availableYears.map(
                     (year) => (
-
-                      <button
+                      <option
                         key={year}
-                        className={`optionButton ${
-                          selectedYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            selectedYears,
-                            setSelectedYears
-                          )
-                        }
+                        value={year}
                       >
                         {year}
-                      </button>
-
+                      </option>
                     )
                   )}
 
-                </div>
+                </select>
 
-              </>
+              </div>
 
             )}
 
@@ -2068,9 +2203,7 @@ export default function Dashboard() {
                     <Line
                       type="monotone"
                       dataKey="value"
-                      name={
-                        selectedType?.energy_name
-                      }
+                      name="Energy Consumption"
                       strokeWidth={3}
                       dot={{
                         r: 4,
@@ -2105,9 +2238,7 @@ export default function Dashboard() {
 
                     <Bar
                       dataKey="value"
-                      name={
-                        selectedType?.energy_name
-                      }
+                      name="Energy Consumption"
                     />
 
                   </BarChart>
@@ -2134,8 +2265,6 @@ export default function Dashboard() {
 
           <section className="filterCard">
 
-            {/* COMPARISON TYPE */}
-
             <div className="filterGroup">
 
               <label className="filterLabel">
@@ -2146,13 +2275,11 @@ export default function Dashboard() {
                 className="select"
                 value={comparisonType}
                 onChange={(e) => {
+
                   setComparisonType(
                     e.target.value
                   );
 
-                  setComparisonMonths([]);
-                  setComparisonYears([]);
-                  setComparisonDays([]);
                 }}
               >
 
@@ -2171,8 +2298,6 @@ export default function Dashboard() {
               </select>
 
             </div>
-
-            {/* COMPARISON CHART */}
 
             <div className="filterGroup">
 
@@ -2205,410 +2330,351 @@ export default function Dashboard() {
           </section>
 
           {/* =================================================
-              COMPARISON SELECTION
+              COMPARISON DROPDOWNS
           ================================================= */}
 
           <section className="selectionCard">
 
-            {/* MONTHLY */}
+            {/* MONTHLY COMPARISON */}
 
             {comparisonType ===
               "monthly" && (
-
               <>
 
-                <div className="selectionHeader">
+                <div className="selectionGroup">
 
-                  <div className="selectionTitle">
-                    Select Months
-                  </div>
+                  <label className="selectionLabel">
+                    Month
+                  </label>
 
-                  <div className="selectionActions">
+                  <select
+                    className="select"
+                    value={comparisonMonth}
+                    onChange={(e) =>
+                      setComparisonMonth(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          months.map(
-                            (item) =>
-                              item.value
-                          ),
-                          setComparisonMonths
-                        )
-                      }
-                    >
-                      Select All
-                    </button>
+                    <option value="">
+                      All Months
+                    </option>
 
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setComparisonMonths
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
+                    {months.map(
+                      (month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      )
+                    )}
 
-                  </div>
+                  </select>
 
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {months.map((month) => (
+                  <label className="selectionLabel">
+                    Year 1
+                  </label>
 
-                    <button
-                      key={month.value}
-                      className={`optionButton ${
-                        comparisonMonths.includes(
-                          month.value
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleItem(
-                          month.value,
-                          comparisonMonths,
-                          setComparisonMonths
-                        )
-                      }
-                    >
-                      {month.label}
-                    </button>
+                  <select
+                    className="select"
+                    value={comparisonYear}
+                    onChange={(e) =>
+                      setComparisonYear(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                  ))}
+                    <option value="">
+                      Select Year
+                    </option>
 
-                </div>
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
 
-                <div
-                  className="selectionHeader"
-                  style={{
-                    marginTop: 18,
-                  }}
-                >
-
-                  <div className="selectionTitle">
-                    Select Years
-                  </div>
-
-                  <div className="selectionActions">
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          availableYears,
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Select All
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-
-                  </div>
+                  </select>
 
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {availableYears.map(
-                    (year) => (
+                  <label className="selectionLabel">
+                    Year 2
+                  </label>
 
-                      <button
-                        key={year}
-                        className={`optionButton ${
-                          comparisonYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            comparisonYears,
-                            setComparisonYears
-                          )
-                        }
-                      >
-                        {year}
-                      </button>
+                  <select
+                    className="select"
+                    value={comparisonYear2}
+                    onChange={(e) =>
+                      setComparisonYear2(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    )
-                  )}
+                    <option value="">
+                      Select Year
+                    </option>
+
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
+
+                  </select>
 
                 </div>
 
               </>
-
             )}
 
-            {/* YEARLY */}
+            {/* YEARLY COMPARISON */}
 
             {comparisonType ===
               "yearly" && (
-
               <>
 
-                <div className="selectionHeader">
+                <div className="selectionGroup">
 
-                  <div className="selectionTitle">
-                    Select Years
-                  </div>
+                  <label className="selectionLabel">
+                    Year 1
+                  </label>
 
-                  <div className="selectionActions">
+                  <select
+                    className="select"
+                    value={comparisonYear}
+                    onChange={(e) =>
+                      setComparisonYear(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          availableYears,
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Select All
-                    </button>
+                    <option value="">
+                      Select Year
+                    </option>
 
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
 
-                  </div>
+                  </select>
 
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {availableYears.map(
-                    (year) => (
+                  <label className="selectionLabel">
+                    Year 2
+                  </label>
 
-                      <button
-                        key={year}
-                        className={`optionButton ${
-                          comparisonYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            comparisonYears,
-                            setComparisonYears
-                          )
-                        }
-                      >
-                        {year}
-                      </button>
+                  <select
+                    className="select"
+                    value={comparisonYear2}
+                    onChange={(e) =>
+                      setComparisonYear2(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    )
-                  )}
+                    <option value="">
+                      Select Year
+                    </option>
+
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
+
+                  </select>
 
                 </div>
 
               </>
-
             )}
 
-            {/* DAILY */}
+            {/* DAILY COMPARISON */}
 
             {comparisonType ===
               "daily" && (
-
               <>
 
-                <div className="selectionTitle">
-                  Select Month
-                </div>
+                <div className="selectionGroup">
 
-                <div className="optionGrid">
+                  <label className="selectionLabel">
+                    Day
+                  </label>
 
-                  {months.map((month) => (
+                  <select
+                    className="select"
+                    value={comparisonDay}
+                    onChange={(e) =>
+                      setComparisonDay(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    <button
-                      key={month.value}
-                      className={`optionButton ${
-                        comparisonMonths[0] ===
-                        month.value
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setComparisonMonths([
-                          month.value,
-                        ])
-                      }
-                    >
-                      {month.label}
-                    </button>
+                    <option value="">
+                      Select Day
+                    </option>
 
-                  ))}
+                    {days.map(
+                      (day) => (
+                        <option
+                          key={day}
+                          value={day}
+                        >
+                          {day}
+                        </option>
+                      )
+                    )}
 
-                </div>
-
-                <div
-                  className="selectionHeader"
-                  style={{
-                    marginTop: 18,
-                  }}
-                >
-
-                  <div className="selectionTitle">
-                    Select Days
-                  </div>
-
-                  <div className="selectionActions">
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          days,
-                          setComparisonDays
-                        )
-                      }
-                    >
-                      Select All
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setComparisonDays
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-
-                  </div>
+                  </select>
 
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {days.map((day) => (
+                  <label className="selectionLabel">
+                    Month
+                  </label>
 
-                    <button
-                      key={day}
-                      className={`optionButton ${
-                        comparisonDays.includes(
-                          day
-                        )
-                          ? "active"
-                          : ""
-                      }`}
-                      onClick={() =>
-                        toggleItem(
-                          day,
-                          comparisonDays,
-                          setComparisonDays
-                        )
-                      }
-                    >
-                      {day}
-                    </button>
+                  <select
+                    className="select"
+                    value={comparisonMonth}
+                    onChange={(e) =>
+                      setComparisonMonth(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                  ))}
+                    <option value="">
+                      Select Month
+                    </option>
 
-                </div>
+                    {months.map(
+                      (month) => (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                        >
+                          {month.label}
+                        </option>
+                      )
+                    )}
 
-                <div
-                  className="selectionHeader"
-                  style={{
-                    marginTop: 18,
-                  }}
-                >
-
-                  <div className="selectionTitle">
-                    Select Years
-                  </div>
-
-                  <div className="selectionActions">
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        selectAll(
-                          availableYears,
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Select All
-                    </button>
-
-                    <button
-                      className="smallButton"
-                      onClick={() =>
-                        clearAll(
-                          setComparisonYears
-                        )
-                      }
-                    >
-                      Clear
-                    </button>
-
-                  </div>
+                  </select>
 
                 </div>
 
-                <div className="optionGrid">
+                <div className="selectionGroup">
 
-                  {availableYears.map(
-                    (year) => (
+                  <label className="selectionLabel">
+                    Year 1
+                  </label>
 
-                      <button
-                        key={year}
-                        className={`optionButton ${
-                          comparisonYears.includes(
-                            year
-                          )
-                            ? "active"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          toggleItem(
-                            year,
-                            comparisonYears,
-                            setComparisonYears
-                          )
-                        }
-                      >
-                        {year}
-                      </button>
+                  <select
+                    className="select"
+                    value={comparisonYear}
+                    onChange={(e) =>
+                      setComparisonYear(
+                        e.target.value
+                      )
+                    }
+                  >
 
-                    )
-                  )}
+                    <option value="">
+                      Select Year
+                    </option>
+
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+                <div className="selectionGroup">
+
+                  <label className="selectionLabel">
+                    Year 2
+                  </label>
+
+                  <select
+                    className="select"
+                    value={comparisonYear2}
+                    onChange={(e) =>
+                      setComparisonYear2(
+                        e.target.value
+                      )
+                    }
+                  >
+
+                    <option value="">
+                      Select Year
+                    </option>
+
+                    {availableYears.map(
+                      (year) => (
+                        <option
+                          key={year}
+                          value={year}
+                        >
+                          {year}
+                        </option>
+                      )
+                    )}
+
+                  </select>
 
                 </div>
 
               </>
-
             )}
 
           </section>
@@ -2622,7 +2688,13 @@ export default function Dashboard() {
             <div className="chartHeader">
 
               <h2>
-                Monthly / Yearly / Daily Energy Comparison
+                {comparisonType ===
+                "monthly"
+                  ? "Monthly Energy Consumption Comparison"
+                  : comparisonType ===
+                    "yearly"
+                  ? "Yearly Energy Consumption Comparison"
+                  : "Daily Energy Consumption Comparison"}
               </h2>
 
               <div className="chartTools">
@@ -2657,7 +2729,8 @@ export default function Dashboard() {
 
             <div className="chart">
 
-              {comparisonData.length === 0 ? (
+              {comparisonData.length ===
+              0 ? (
 
                 <div className="emptyChart">
 
@@ -2718,9 +2791,7 @@ export default function Dashboard() {
                       <Line
                         type="monotone"
                         dataKey="value"
-                        name={
-                          selectedType?.energy_name
-                        }
+                        name="Energy Consumption"
                         strokeWidth={3}
                         dot={{
                           r: 4,
@@ -2772,9 +2843,7 @@ export default function Dashboard() {
                       "yearly" && (
                       <Bar
                         dataKey="value"
-                        name={
-                          selectedType?.energy_name
-                        }
+                        name="Energy Consumption"
                       />
                     )}
 
@@ -2826,6 +2895,7 @@ export default function Dashboard() {
                       {selectedType?.energy_name ||
                         "Energy"}
                       <br />
+
                       <small>
                         {selectedType?.unit ||
                           ""}
