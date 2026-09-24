@@ -21,7 +21,7 @@ const supabase = createClient(
 );
 
 /* =========================================================
-   ICON
+   ENERGY ICON
 ========================================================= */
 
 function getEnergyIcon(name = "") {
@@ -133,7 +133,7 @@ function getPeriodLabel(row, viewType) {
 }
 
 /* =========================================================
-   MAIN DASHBOARD
+   DASHBOARD
 ========================================================= */
 
 export default function DashboardPage() {
@@ -232,7 +232,7 @@ export default function DashboardPage() {
   }
 
   /* =======================================================
-     SELECTED ENERGY TYPE
+     SELECTED ENERGY
   ======================================================= */
 
   const selectedType = useMemo(() => {
@@ -269,12 +269,6 @@ export default function DashboardPage() {
       return Number(found.value) || 0;
     }
 
-    /*
-      รองรับข้อมูลเก่า
-      กรณี energy_data ยังมี column
-      เช่น electricity / solar / gas
-    */
-
     return (
       Number(
         row[energyType.energy_key]
@@ -293,11 +287,6 @@ export default function DashboardPage() {
 
     return records
       .filter((row) => {
-        /*
-          ถ้า record เป็น daily
-          แสดงเมื่อเลือก daily
-        */
-
         if (viewType === "daily") {
           return (
             !row.period_type ||
@@ -305,19 +294,11 @@ export default function DashboardPage() {
           );
         }
 
-        /*
-          monthly
-        */
-
         if (viewType === "monthly") {
           return (
             row.period_type === "monthly"
           );
         }
-
-        /*
-          yearly
-        */
 
         if (viewType === "yearly") {
           return (
@@ -401,7 +382,7 @@ export default function DashboardPage() {
   ]);
 
   /* =======================================================
-     TOTAL SELECTED ENERGY
+     SELECTED TOTAL
   ======================================================= */
 
   const selectedTotal = useMemo(() => {
@@ -473,11 +454,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="header-date">
+
           <div className="header-date-icon">
             📊
           </div>
 
           <div>
+
             <div className="header-date-title">
               ข้อมูลพลังงาน
             </div>
@@ -485,7 +468,9 @@ export default function DashboardPage() {
             <div className="header-date-sub">
               Factory Energy Management
             </div>
+
           </div>
+
         </div>
 
       </div>
@@ -530,75 +515,117 @@ export default function DashboardPage() {
       </div>
 
       {/* =================================================
-          ANALYSIS HEADER
+          ANALYSIS SECTION
       ================================================= */}
 
       <div className="analysis-section">
 
         <div className="section-title">
-          <div>
-            <h2>
-              วิเคราะห์ข้อมูลพลังงาน
-            </h2>
 
-            <p>
-              แสดงข้อมูลตามช่วงเวลาที่เลือก
-            </p>
-          </div>
+          <h2>
+            วิเคราะห์ข้อมูลพลังงาน
+          </h2>
+
+          <p>
+            เลือกประเภทพลังงานและช่วงเวลาที่ต้องการดู
+          </p>
 
         </div>
 
-        {/* =================================================
-            PERIOD TABS
-        ================================================= */}
+        {/* ===============================================
+            CONTROLS
+        =============================================== */}
 
-        <div className="period-tabs">
+        <div className="analysis-controls">
 
-          <button
-            className={
-              viewType === "daily"
-                ? "period-tab active"
-                : "period-tab"
-            }
-            onClick={() =>
-              setViewType("daily")
-            }
-          >
-            รายวัน
-          </button>
+          {/* ENERGY SELECT */}
 
-          <button
-            className={
-              viewType === "monthly"
-                ? "period-tab active"
-                : "period-tab"
-            }
-            onClick={() =>
-              setViewType("monthly")
-            }
-          >
-            รายเดือน
-          </button>
+          <div className="energy-control">
 
-          <button
-            className={
-              viewType === "yearly"
-                ? "period-tab active"
-                : "period-tab"
-            }
-            onClick={() =>
-              setViewType("yearly")
-            }
-          >
-            รายปี
-          </button>
+            <label>
+              ข้อมูลพลังงาน
+            </label>
+
+            <select
+              value={selectedEnergy}
+              onChange={(e) =>
+                setSelectedEnergy(
+                  e.target.value
+                )
+              }
+            >
+
+              {energyTypes.map(
+                (type) => (
+                  <option
+                    key={type.id}
+                    value={
+                      type.energy_key
+                    }
+                  >
+                    {getEnergyIcon(
+                      type.energy_name
+                    )}{" "}
+                    {type.energy_name}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          </div>
+
+          {/* PERIOD SELECT */}
+
+          <div className="period-tabs">
+
+            <button
+              className={
+                viewType === "daily"
+                  ? "period-tab active"
+                  : "period-tab"
+              }
+              onClick={() =>
+                setViewType("daily")
+              }
+            >
+              รายวัน
+            </button>
+
+            <button
+              className={
+                viewType === "monthly"
+                  ? "period-tab active"
+                  : "period-tab"
+              }
+              onClick={() =>
+                setViewType("monthly")
+              }
+            >
+              รายเดือน
+            </button>
+
+            <button
+              className={
+                viewType === "yearly"
+                  ? "period-tab active"
+                  : "period-tab"
+              }
+              onClick={() =>
+                setViewType("yearly")
+              }
+            >
+              รายปี
+            </button>
+
+          </div>
 
         </div>
 
       </div>
 
       {/* =================================================
-          SELECTED ENERGY INFO
+          SELECTED ENERGY SUMMARY
       ================================================= */}
 
       <div className="selected-energy-card">
@@ -653,6 +680,7 @@ export default function DashboardPage() {
         <div className="chart-header">
 
           <div>
+
             <h3>
               📈 กราฟเส้น
             </h3>
@@ -662,6 +690,7 @@ export default function DashboardPage() {
                 "ข้อมูลพลังงาน"}{" "}
               ({selectedType?.unit || ""})
             </p>
+
           </div>
 
         </div>
@@ -669,14 +698,18 @@ export default function DashboardPage() {
         <div className="chart-container">
 
           {chartData.length === 0 ? (
+
             <div className="empty-chart">
               ยังไม่มีข้อมูลสำหรับช่วงเวลานี้
             </div>
+
           ) : (
+
             <ResponsiveContainer
               width="100%"
               height="100%"
             >
+
               <LineChart
                 data={chartData}
                 margin={{
@@ -735,7 +768,9 @@ export default function DashboardPage() {
                 />
 
               </LineChart>
+
             </ResponsiveContainer>
+
           )}
 
         </div>
@@ -751,6 +786,7 @@ export default function DashboardPage() {
         <div className="chart-header">
 
           <div>
+
             <h3>
               📊 กราฟแท่ง
             </h3>
@@ -760,6 +796,7 @@ export default function DashboardPage() {
                 "ข้อมูลพลังงาน"}{" "}
               ({selectedType?.unit || ""})
             </p>
+
           </div>
 
         </div>
@@ -767,14 +804,18 @@ export default function DashboardPage() {
         <div className="chart-container">
 
           {chartData.length === 0 ? (
+
             <div className="empty-chart">
               ยังไม่มีข้อมูลสำหรับช่วงเวลานี้
             </div>
+
           ) : (
+
             <ResponsiveContainer
               width="100%"
               height="100%"
             >
+
               <BarChart
                 data={chartData}
                 margin={{
@@ -831,7 +872,9 @@ export default function DashboardPage() {
                 />
 
               </BarChart>
+
             </ResponsiveContainer>
+
           )}
 
         </div>
@@ -860,39 +903,19 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* ENERGY SELECTOR */}
-          <div className="energy-selector">
+          {/* แสดงพลังงานที่เลือก */}
+          <div className="table-current-energy">
 
-            <label>
-              เลือกข้อมูลพลังงาน
-            </label>
-
-            <select
-              value={selectedEnergy}
-              onChange={(e) =>
-                setSelectedEnergy(
-                  e.target.value
-                )
-              }
-            >
-
-              {energyTypes.map(
-                (type) => (
-                  <option
-                    key={type.id}
-                    value={
-                      type.energy_key
-                    }
-                  >
-                    {getEnergyIcon(
-                      type.energy_name
-                    )}{" "}
-                    {type.energy_name}
-                  </option>
-                )
+            <span className="table-energy-icon">
+              {getEnergyIcon(
+                selectedType?.energy_name
               )}
+            </span>
 
-            </select>
+            <span>
+              {selectedType?.energy_name ||
+                "-"}
+            </span>
 
           </div>
 
@@ -903,6 +926,7 @@ export default function DashboardPage() {
         {filteredRecords.length === 0 ? (
 
           <div className="empty-table">
+
             <div className="empty-table-icon">
               📋
             </div>
@@ -914,6 +938,7 @@ export default function DashboardPage() {
             <p>
               ยังไม่มีข้อมูลสำหรับช่วงเวลาที่เลือก
             </p>
+
           </div>
 
         ) : (
@@ -1028,13 +1053,11 @@ export default function DashboardPage() {
       ================================================= */}
 
       <div className="dashboard-footer">
-
         Factory Energy Management System
-
       </div>
 
       {/* =================================================
-          PAGE CSS
+          CSS
       ================================================= */}
 
       <style jsx>{`
@@ -1076,12 +1099,13 @@ export default function DashboardPage() {
           border: 1px solid #e2e8f0;
           border-radius: 14px;
           padding: 12px 16px;
-          box-shadow: 0 2px 8px rgba(
-            15,
-            23,
-            42,
-            0.04
-          );
+          box-shadow: 0 2px 8px
+            rgba(
+              15,
+              23,
+              42,
+              0.04
+            );
         }
 
         .header-date-icon {
@@ -1176,8 +1200,12 @@ export default function DashboardPage() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 20px;
-          margin-bottom: 18px;
+          gap: 24px;
+          margin-bottom: 20px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 18px 20px;
         }
 
         .section-title h2 {
@@ -1192,22 +1220,67 @@ export default function DashboardPage() {
           color: #64748b;
         }
 
+        /* CONTROLS */
+
+        .analysis-controls {
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-end;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .energy-control {
+          min-width: 180px;
+        }
+
+        .energy-control label {
+          display: block;
+          margin-bottom: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        .energy-control select {
+          height: 42px;
+          min-width: 180px;
+          border: 1px solid #cbd5e1;
+          border-radius: 9px;
+          background: white;
+          color: #0f172a;
+          padding: 0 12px;
+          font-size: 14px;
+          outline: none;
+          cursor: pointer;
+        }
+
+        .energy-control select:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 3px
+            rgba(
+              37,
+              99,
+              235,
+              0.1
+            );
+        }
+
         /* PERIOD */
 
         .period-tabs {
           display: flex;
-          gap: 6px;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 5px;
+          gap: 5px;
+          background: #f1f5f9;
+          border-radius: 10px;
+          padding: 4px;
         }
 
         .period-tab {
           border: none;
           background: transparent;
-          padding: 9px 18px;
-          border-radius: 8px;
+          padding: 9px 16px;
+          border-radius: 7px;
           cursor: pointer;
           font-size: 14px;
           color: #64748b;
@@ -1215,7 +1288,7 @@ export default function DashboardPage() {
         }
 
         .period-tab:hover {
-          background: #f1f5f9;
+          background: #e2e8f0;
         }
 
         .period-tab.active {
@@ -1293,7 +1366,7 @@ export default function DashboardPage() {
           color: #64748b;
         }
 
-        /* CHART CARD */
+        /* CHART */
 
         .chart-card {
           background: white;
@@ -1343,7 +1416,7 @@ export default function DashboardPage() {
           font-size: 14px;
         }
 
-        /* DATA TABLE */
+        /* TABLE */
 
         .data-table-card {
           background: white;
@@ -1362,7 +1435,7 @@ export default function DashboardPage() {
         .table-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-end;
+          align-items: center;
           gap: 20px;
           padding: 22px;
           border-bottom: 1px solid #e2e8f0;
@@ -1380,45 +1453,21 @@ export default function DashboardPage() {
           color: #64748b;
         }
 
-        /* SELECTOR */
-
-        .energy-selector {
-          min-width: 220px;
-        }
-
-        .energy-selector label {
-          display: block;
-          margin-bottom: 6px;
-          font-size: 12px;
-          color: #64748b;
+        .table-current-energy {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #eff6ff;
+          color: #2563eb;
+          padding: 8px 12px;
+          border-radius: 9px;
+          font-size: 13px;
           font-weight: 600;
         }
 
-        .energy-selector select {
-          width: 100%;
-          height: 40px;
-          border: 1px solid #cbd5e1;
-          border-radius: 9px;
-          padding: 0 12px;
-          background: white;
-          color: #0f172a;
-          font-size: 14px;
-          outline: none;
-          cursor: pointer;
+        .table-energy-icon {
+          font-size: 17px;
         }
-
-        .energy-selector select:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px
-            rgba(
-              37,
-              99,
-              235,
-              0.1
-            );
-        }
-
-        /* TABLE */
 
         .table-wrapper {
           width: 100%;
@@ -1478,7 +1527,7 @@ export default function DashboardPage() {
           max-width: 300px;
         }
 
-        /* EMPTY */
+        /* EMPTY TABLE */
 
         .empty-table {
           text-align: center;
@@ -1512,6 +1561,20 @@ export default function DashboardPage() {
 
         /* RESPONSIVE */
 
+        @media (max-width: 1000px) {
+
+          .analysis-section {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .analysis-controls {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+        }
+
         @media (max-width: 900px) {
 
           .dashboard-page {
@@ -1519,11 +1582,6 @@ export default function DashboardPage() {
           }
 
           .dashboard-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-
-          .analysis-section {
             flex-direction: column;
             align-items: flex-start;
           }
@@ -1537,15 +1595,6 @@ export default function DashboardPage() {
             text-align: left;
           }
 
-          .table-header {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .energy-selector {
-            width: 100%;
-          }
-
         }
 
         @media (max-width: 600px) {
@@ -1556,6 +1605,19 @@ export default function DashboardPage() {
 
           .dashboard-header h1 {
             font-size: 26px;
+          }
+
+          .analysis-controls {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .energy-control {
+            width: 100%;
+          }
+
+          .energy-control select {
+            width: 100%;
           }
 
           .period-tabs {
@@ -1573,6 +1635,11 @@ export default function DashboardPage() {
 
           .summary-grid {
             grid-template-columns: 1fr;
+          }
+
+          .table-header {
+            align-items: flex-start;
+            flex-direction: column;
           }
 
         }
