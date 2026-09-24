@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -9,187 +9,186 @@ const supabase = createClient(
 );
 
 export default function Home() {
-  const [form, setForm] = useState({
-    record_date: "",
-    electricity: "",
-    solar: "",
-    gas: "",
-    fuel: "",
-    steam: "",
-    water: "",
-    note: "",
-  });
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [message, setMessage] = useState("");
+  async function loadData() {
+    setLoading(true);
 
-  function handleChange(e) {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  }
-
-  async function saveData(e) {
-    e.preventDefault();
-    setMessage("กำลังบันทึก...");
-
-    const { error } = await supabase.from("energy_data").insert([
-      {
-        record_date: form.record_date,
-        electricity: Number(form.electricity) || 0,
-        solar: Number(form.solar) || 0,
-        gas: Number(form.gas) || 0,
-        fuel: Number(form.fuel) || 0,
-        steam: Number(form.steam) || 0,
-        water: Number(form.water) || 0,
-        note: form.note,
-      },
-    ]);
+    const { data, error } = await supabase
+      .from("energy_data")
+      .select("*")
+      .order("record_date", { ascending: false });
 
     if (error) {
-      setMessage("❌ บันทึกไม่สำเร็จ: " + error.message);
+      console.error(error);
+      alert("โหลดข้อมูลไม่สำเร็จ: " + error.message);
+      setLoading(false);
       return;
     }
 
-    setMessage("✅ บันทึกข้อมูลสำเร็จ");
-
-    setForm({
-      record_date: "",
-      electricity: "",
-      solar: "",
-      gas: "",
-      fuel: "",
-      steam: "",
-      water: "",
-      note: "",
-    });
+    setData(data || []);
+    setLoading(false);
   }
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const total = (field) =>
+    data.reduce((sum, item) => sum + Number(item[field] || 0), 0);
+
   return (
-    <main>
+    <main
+      style={{
+        padding: "30px",
+        fontFamily: "Arial, sans-serif",
+        maxWidth: "1200px",
+        margin: "auto",
+      }}
+    >
       <h1>Factory Energy Management</h1>
+
       <p>ระบบจัดการพลังงานโรงงาน</p>
 
-      <h2>บันทึกข้อมูลพลังงาน</h2>
+      <hr />
 
-      <form onSubmit={saveData}>
-        <div>
-          <label>วันที่</label>
-          <br />
-          <input
-            type="date"
-            name="record_date"
-            value={form.record_date}
-            onChange={handleChange}
-            required
-          />
-        </div>
+      <h2>📊 Energy Dashboard</h2>
 
-        <br />
+      {loading ? (
+        <p>กำลังโหลดข้อมูล...</p>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "20px",
+              marginTop: "20px",
+            }}
+          >
+            <Card
+              title="⚡ ไฟฟ้า"
+              value={total("electricity")}
+              unit="kWh"
+            />
 
-        <div>
-          <label>ไฟฟ้า (kWh)</label>
-          <br />
-          <input
-            type="number"
-            name="electricity"
-            value={form.electricity}
-            onChange={handleChange}
-            placeholder="เช่น 12500"
-          />
-        </div>
+            <Card
+              title="☀️ Solar"
+              value={total("solar")}
+              unit="kWh"
+            />
 
-        <br />
+            <Card
+              title="🔥 Gas"
+              value={total("gas")}
+              unit="หน่วย"
+            />
 
-        <div>
-          <label>Solar</label>
-          <br />
-          <input
-            type="number"
-            name="solar"
-            value={form.solar}
-            onChange={handleChange}
-            placeholder="เช่น 3500"
-          />
-        </div>
+            <Card
+              title="🛢️ น้ำมัน"
+              value={total("fuel")}
+              unit="หน่วย"
+            />
 
-        <br />
+            <Card
+              title="💨 Steam"
+              value={total("steam")}
+              unit="หน่วย"
+            />
 
-        <div>
-          <label>Gas</label>
-          <br />
-          <input
-            type="number"
-            name="gas"
-            value={form.gas}
-            onChange={handleChange}
-            placeholder="เช่น 500"
-          />
-        </div>
+            <Card
+              title="💧 น้ำ"
+              value={total("water")}
+              unit="หน่วย"
+            />
+          </div>
 
-        <br />
+          <h2 style={{ marginTop: "40px" }}>
+            📋 ข้อมูลพลังงาน
+          </h2>
 
-        <div>
-          <label>น้ำมัน</label>
-          <br />
-          <input
-            type="number"
-            name="fuel"
-            value={form.fuel}
-            onChange={handleChange}
-            placeholder="เช่น 200"
-          />
-        </div>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginTop: "15px",
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={th}>วันที่</th>
+                <th style={th}>ไฟฟ้า</th>
+                <th style={th}>Solar</th>
+                <th style={th}>Gas</th>
+                <th style={th}>น้ำมัน</th>
+                <th style={th}>Steam</th>
+                <th style={th}>น้ำ</th>
+              </tr>
+            </thead>
 
-        <br />
+            <tbody>
+              {data.map((item) => (
+                <tr key={item.id}>
+                  <td style={td}>{item.record_date}</td>
+                  <td style={td}>{item.electricity}</td>
+                  <td style={td}>{item.solar}</td>
+                  <td style={td}>{item.gas}</td>
+                  <td style={td}>{item.fuel}</td>
+                  <td style={td}>{item.steam}</td>
+                  <td style={td}>{item.water}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        <div>
-          <label>Steam</label>
-          <br />
-          <input
-            type="number"
-            name="steam"
-            value={form.steam}
-            onChange={handleChange}
-            placeholder="เช่น 1000"
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label>น้ำ</label>
-          <br />
-          <input
-            type="number"
-            name="water"
-            value={form.water}
-            onChange={handleChange}
-            placeholder="เช่น 800"
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label>หมายเหตุ</label>
-          <br />
-          <textarea
-            name="note"
-            value={form.note}
-            onChange={handleChange}
-            placeholder="รายละเอียดเพิ่มเติม"
-          />
-        </div>
-
-        <br />
-
-        <button type="submit">
-          บันทึกข้อมูล
-        </button>
-      </form>
-
-      <p>{message}</p>
+          {data.length === 0 && (
+            <p>ยังไม่มีข้อมูลพลังงาน</p>
+          )}
+        </>
+      )}
     </main>
   );
 }
+
+function Card({ title, value, unit }) {
+  return (
+    <div
+      style={{
+        padding: "25px",
+        borderRadius: "12px",
+        background: "#f5f5f5",
+        border: "1px solid #ddd",
+      }}
+    >
+      <h3>{title}</h3>
+
+      <div
+        style={{
+          fontSize: "30px",
+          fontWeight: "bold",
+          marginTop: "10px",
+        }}
+      >
+        {value.toLocaleString()}
+      </div>
+
+      <div style={{ marginTop: "5px", color: "#666" }}>
+        {unit}
+      </div>
+    </div>
+  );
+}
+
+const th = {
+  border: "1px solid #ddd",
+  padding: "10px",
+  background: "#f0f0f0",
+  textAlign: "center",
+};
+
+const td = {
+  border: "1px solid #ddd",
+  padding: "10px",
+  textAlign: "center",
+};
