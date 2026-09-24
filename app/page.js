@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,20 +9,60 @@ const supabase = createClient(
 );
 
 export default function Home() {
-  async function testSupabase() {
-    const { data, error } = await supabase
-      .from("energy_data")
-      .select("*")
-      .limit(5);
+  const [form, setForm] = useState({
+    record_date: "",
+    electricity: "",
+    solar: "",
+    gas: "",
+    fuel: "",
+    steam: "",
+    water: "",
+    note: "",
+  });
+
+  const [message, setMessage] = useState("");
+
+  function handleChange(e) {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  }
+
+  async function saveData(e) {
+    e.preventDefault();
+    setMessage("กำลังบันทึก...");
+
+    const { error } = await supabase.from("energy_data").insert([
+      {
+        record_date: form.record_date,
+        electricity: Number(form.electricity) || 0,
+        solar: Number(form.solar) || 0,
+        gas: Number(form.gas) || 0,
+        fuel: Number(form.fuel) || 0,
+        steam: Number(form.steam) || 0,
+        water: Number(form.water) || 0,
+        note: form.note,
+      },
+    ]);
 
     if (error) {
-      alert("เชื่อมต่อไม่สำเร็จ: " + error.message);
-      console.error(error);
+      setMessage("❌ บันทึกไม่สำเร็จ: " + error.message);
       return;
     }
 
-    console.log(data);
-    alert("เชื่อมต่อ Supabase สำเร็จ! พบข้อมูล " + data.length + " รายการ");
+    setMessage("✅ บันทึกข้อมูลสำเร็จ");
+
+    setForm({
+      record_date: "",
+      electricity: "",
+      solar: "",
+      gas: "",
+      fuel: "",
+      steam: "",
+      water: "",
+      note: "",
+    });
   }
 
   return (
@@ -29,9 +70,126 @@ export default function Home() {
       <h1>Factory Energy Management</h1>
       <p>ระบบจัดการพลังงานโรงงาน</p>
 
-      <button onClick={testSupabase}>
-        ทดสอบเชื่อมต่อ Supabase
-      </button>
+      <h2>บันทึกข้อมูลพลังงาน</h2>
+
+      <form onSubmit={saveData}>
+        <div>
+          <label>วันที่</label>
+          <br />
+          <input
+            type="date"
+            name="record_date"
+            value={form.record_date}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>ไฟฟ้า (kWh)</label>
+          <br />
+          <input
+            type="number"
+            name="electricity"
+            value={form.electricity}
+            onChange={handleChange}
+            placeholder="เช่น 12500"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>Solar</label>
+          <br />
+          <input
+            type="number"
+            name="solar"
+            value={form.solar}
+            onChange={handleChange}
+            placeholder="เช่น 3500"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>Gas</label>
+          <br />
+          <input
+            type="number"
+            name="gas"
+            value={form.gas}
+            onChange={handleChange}
+            placeholder="เช่น 500"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>น้ำมัน</label>
+          <br />
+          <input
+            type="number"
+            name="fuel"
+            value={form.fuel}
+            onChange={handleChange}
+            placeholder="เช่น 200"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>Steam</label>
+          <br />
+          <input
+            type="number"
+            name="steam"
+            value={form.steam}
+            onChange={handleChange}
+            placeholder="เช่น 1000"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>น้ำ</label>
+          <br />
+          <input
+            type="number"
+            name="water"
+            value={form.water}
+            onChange={handleChange}
+            placeholder="เช่น 800"
+          />
+        </div>
+
+        <br />
+
+        <div>
+          <label>หมายเหตุ</label>
+          <br />
+          <textarea
+            name="note"
+            value={form.note}
+            onChange={handleChange}
+            placeholder="รายละเอียดเพิ่มเติม"
+          />
+        </div>
+
+        <br />
+
+        <button type="submit">
+          บันทึกข้อมูล
+        </button>
+      </form>
+
+      <p>{message}</p>
     </main>
   );
 }
