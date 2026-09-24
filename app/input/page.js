@@ -549,10 +549,10 @@ marginBottom: "8px",
 };
 
 const inputStyle = {
-width: "100%",
-padding: "12px",
-borderRadius: "8px",
-border: "1px solid #ccc",
-fontSize: "15px",
-boxSizing: "border-box",
+  width: "100%",
+  padding: "12px",
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  fontSize: "15px",
+  boxSizing: "border-box",
 };
