@@ -1,3 +1,4 @@
+```jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,15 +11,30 @@ const supabase = createClient(
 
 export default function InputPage() {
   const [energyTypes, setEnergyTypes] = useState([]);
+
   const [periodType, setPeriodType] = useState("daily");
-  const [periodLabel, setPeriodLabel] = useState("");
-  const [recordDate, setRecordDate] = useState("");
+
+  // ปี / เดือน / วันที่
+  const [selectedYear, setSelectedYear] = useState(
+    new Date().getFullYear()
+  );
+  const [selectedMonth, setSelectedMonth] = useState(
+    String(new Date().getMonth() + 1).padStart(2, "0")
+  );
+  const [selectedDay, setSelectedDay] = useState(
+    String(new Date().getDate()).padStart(2, "0")
+  );
+
   const [values, setValues] = useState({});
   const [note, setNote] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  /* =========================================================
+     LOAD ENERGY TYPES
+  ========================================================= */
 
   useEffect(() => {
     loadEnergyTypes();
@@ -34,7 +50,10 @@ export default function InputPage() {
       .order("id");
 
     if (error) {
-      setMessage("❌ โหลดหัวข้อไม่สำเร็จ: " + error.message);
+      setMessage(
+        "❌ โหลดหัวข้อไม่สำเร็จ: " + error.message
+      );
+
       setLoading(false);
       return;
     }
@@ -48,8 +67,13 @@ export default function InputPage() {
     });
 
     setValues(initialValues);
+
     setLoading(false);
   }
+
+  /* =========================================================
+     CHANGE ENERGY VALUE
+  ========================================================= */
 
   function changeValue(id, value) {
     setValues((current) => ({
@@ -58,108 +82,199 @@ export default function InputPage() {
     }));
   }
 
-  function getRecordDate() {
+  /* =========================================================
+     GET PERIOD DATA
+  ========================================================= */
+
+  function getPeriodData() {
+    const year = String(selectedYear);
+    const month = String(selectedMonth).padStart(2, "0");
+    const day = String(selectedDay).padStart(2, "0");
+
+    // รายวัน
     if (periodType === "daily") {
-      return recordDate;
+      const date = `${year}-${month}-${day}`;
+
+      return {
+        recordDate: date,
+        periodLabel: date,
+      };
     }
 
+    // รายเดือน
     if (periodType === "monthly") {
-      if (!periodLabel) return "";
+      const monthValue = `${year}-${month}`;
 
-      return `${periodLabel}-01`;
+      return {
+        recordDate: `${year}-${month}-01`,
+        periodLabel: monthValue,
+      };
     }
 
+    // รายปี
     if (periodType === "yearly") {
-      if (!periodLabel) return "";
-
-      return `${periodLabel}-01-01`;
+      return {
+        recordDate: `${year}-01-01`,
+        periodLabel: year,
+      };
     }
 
-    return "";
+    return {
+      recordDate: "",
+      periodLabel: "",
+    };
   }
+
+  /* =========================================================
+     SAVE DATA
+  ========================================================= */
 
   async function saveData(e) {
     e.preventDefault();
 
-    if (periodType === "daily" && !recordDate) {
-      setMessage("⚠️ กรุณาเลือกวันที่");
-      return;
-    }
-
-    if (
-      (periodType === "monthly" || periodType === "yearly") &&
-      !periodLabel
-    ) {
-      setMessage("⚠️ กรุณาเลือกช่วงเวลา");
-      return;
-    }
-
     setSaving(true);
     setMessage("กำลังบันทึก...");
 
-    const finalRecordDate = getRecordDate();
+    try {
+      const { recordDate, periodLabel } =
+        getPeriodData();
 
-    // 1. สร้างรายการหลัก
-    const { data: energyData, error: energyError } = await supabase
-      .from("energy_data")
-      .insert([
-        {
-          record_date: finalRecordDate,
-          period_type: periodType,
-          period_label: periodLabel || null,
-          note: note,
-        },
-      ])
-      .select()
-      .single();
+      if (!recordDate || !periodLabel) {
+        setMessage("⚠️ กรุณาเลือกช่วงเวลา");
+        setSaving(false);
+        return;
+      }
 
-    if (energyError) {
+      // 1. สร้างรายการหลัก
+      const { data: energyData, error: energyError } =
+        await supabase
+          .from("energy_data")
+          .insert([
+            {
+              record_date: recordDate,
+              period_type: periodType,
+              period_label: periodLabel,
+              note: note || null,
+            },
+          ])
+          .select()
+          .single();
+
+      if (energyError) {
+        setMessage(
+          "❌ บันทึกข้อมูลหลักไม่สำเร็จ: " +
+            energyError.message
+        );
+
+        setSaving(false);
+        return;
+      }
+
+      // 2. เตรียมค่าพลังงาน
+      const energyValues = energyTypes.map((item) => ({
+        energy_data_id: energyData.id,
+        energy_type_id: item.id,
+        value: Number(values[item.id]) || 0,
+      }));
+
+      // 3. บันทึกค่าพลังงาน
+      const { error: valuesError } =
+        await supabase
+          .from("energy_values")
+          .insert(energyValues);
+
+      if (valuesError) {
+        setMessage(
+          "⚠️ สร้างรายการแล้ว แต่บันทึกค่าพลังงานไม่สำเร็จ: " +
+            valuesError.message
+        );
+
+        setSaving(false);
+        return;
+      }
+
+      setMessage("✅ บันทึกข้อมูลสำเร็จ");
+
+      // ล้างค่าพลังงาน
+      const emptyValues = {};
+
+      energyTypes.forEach((item) => {
+        emptyValues[item.id] = "";
+      });
+
+      setValues(emptyValues);
+      setNote("");
+
+    } catch (error) {
+      console.error(error);
+
       setMessage(
-        "❌ บันทึกข้อมูลหลักไม่สำเร็จ: " +
-          energyError.message
+        "❌ เกิดข้อผิดพลาด: " +
+          error.message
       );
-      setSaving(false);
-      return;
     }
-
-    // 2. เตรียมค่าพลังงาน
-    const energyValues = energyTypes.map((item) => ({
-      energy_data_id: energyData.id,
-      energy_type_id: item.id,
-      value: Number(values[item.id]) || 0,
-    }));
-
-    // 3. บันทึกค่าพลังงาน
-    const { error: valuesError } = await supabase
-      .from("energy_values")
-      .insert(energyValues);
-
-    if (valuesError) {
-      setMessage(
-        "⚠️ สร้างรายการแล้ว แต่บันทึกค่าพลังงานไม่สำเร็จ: " +
-          valuesError.message
-      );
-      setSaving(false);
-      return;
-    }
-
-    setMessage("✅ บันทึกข้อมูลสำเร็จ");
-
-    // ล้างข้อมูล
-    setRecordDate("");
-    setPeriodLabel("");
-    setNote("");
-
-    const emptyValues = {};
-
-    energyTypes.forEach((item) => {
-      emptyValues[item.id] = "";
-    });
-
-    setValues(emptyValues);
 
     setSaving(false);
   }
+
+  /* =========================================================
+     YEARS
+  ========================================================= */
+
+  const years = [];
+
+  for (
+    let year = 2000;
+    year <= 2100;
+    year++
+  ) {
+    years.push(year);
+  }
+
+  /* =========================================================
+     MONTHS
+  ========================================================= */
+
+  const months = [
+    { value: "01", label: "มกราคม" },
+    { value: "02", label: "กุมภาพันธ์" },
+    { value: "03", label: "มีนาคม" },
+    { value: "04", label: "เมษายน" },
+    { value: "05", label: "พฤษภาคม" },
+    { value: "06", label: "มิถุนายน" },
+    { value: "07", label: "กรกฎาคม" },
+    { value: "08", label: "สิงหาคม" },
+    { value: "09", label: "กันยายน" },
+    { value: "10", label: "ตุลาคม" },
+    { value: "11", label: "พฤศจิกายน" },
+    { value: "12", label: "ธันวาคม" },
+  ];
+
+  /* =========================================================
+     DAYS
+  ========================================================= */
+
+  const daysInMonth = new Date(
+    selectedYear,
+    Number(selectedMonth),
+    0
+  ).getDate();
+
+  const days = [];
+
+  for (
+    let day = 1;
+    day <= daysInMonth;
+    day++
+  ) {
+    days.push(
+      String(day).padStart(2, "0")
+    );
+  }
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (loading) {
     return (
@@ -172,12 +287,24 @@ export default function InputPage() {
     );
   }
 
+  /* =========================================================
+     PAGE
+  ========================================================= */
+
   return (
     <main style={pageStyle}>
-      <div style={{ maxWidth: "1000px", margin: "auto" }}>
+
+      <div
+        style={{
+          maxWidth: "1000px",
+          margin: "auto",
+        }}
+      >
+
         <div style={cardStyle}>
 
-          {/* Header */}
+          {/* HEADER */}
+
           <div
             style={{
               display: "flex",
@@ -187,7 +314,9 @@ export default function InputPage() {
               gap: "10px",
             }}
           >
+
             <div>
+
               <h1 style={{ margin: 0 }}>
                 📝 บันทึกข้อมูลพลังงาน
               </h1>
@@ -195,6 +324,7 @@ export default function InputPage() {
               <p style={{ color: "#666" }}>
                 กรอกข้อมูลการใช้พลังงานของโรงงาน
               </p>
+
             </div>
 
             <a
@@ -209,12 +339,17 @@ export default function InputPage() {
             >
               ← Dashboard
             </a>
+
           </div>
 
           <form onSubmit={saveData}>
 
-            {/* ประเภทช่วงเวลา */}
+            {/* =================================================
+                PERIOD TYPE
+            ================================================= */}
+
             <div style={{ marginTop: "30px" }}>
+
               <label style={labelStyle}>
                 ประเภทข้อมูล
               </label>
@@ -223,11 +358,10 @@ export default function InputPage() {
                 value={periodType}
                 onChange={(e) => {
                   setPeriodType(e.target.value);
-                  setRecordDate("");
-                  setPeriodLabel("");
                 }}
                 style={inputStyle}
               >
+
                 <option value="daily">
                   รายวัน
                 </option>
@@ -239,72 +373,162 @@ export default function InputPage() {
                 <option value="yearly">
                   รายปี
                 </option>
+
               </select>
+
             </div>
 
-            {/* ช่วงเวลา */}
-            <div style={{ marginTop: "20px" }}>
+            {/* =================================================
+                DATE SELECT
+            ================================================= */}
 
-              {periodType === "daily" && (
-                <>
-                  <label style={labelStyle}>
-                    วันที่
-                  </label>
+            <div
+              style={{
+                marginTop: "20px",
+                display: "grid",
+                gridTemplateColumns:
+                  periodType === "daily"
+                    ? "1fr 1fr 1fr"
+                    : "1fr 1fr",
+                gap: "15px",
+              }}
+            >
 
-                  <input
-                    type="date"
-                    value={recordDate}
-                    onChange={(e) =>
-                      setRecordDate(e.target.value)
-                    }
-                    style={inputStyle}
-                    required
-                  />
-                </>
-              )}
+              {/* YEAR */}
 
-              {periodType === "monthly" && (
-                <>
+              <div>
+
+                <label style={labelStyle}>
+                  ปี
+                </label>
+
+                <select
+                  value={selectedYear}
+                  onChange={(e) =>
+                    setSelectedYear(
+                      Number(e.target.value)
+                    )
+                  }
+                  style={inputStyle}
+                >
+
+                  {years.map((year) => (
+                    <option
+                      key={year}
+                      value={year}
+                    >
+                      {year}
+                    </option>
+                  ))}
+
+                </select>
+
+              </div>
+
+              {/* MONTH */}
+
+              {periodType !== "yearly" && (
+                <div>
+
                   <label style={labelStyle}>
                     เดือน
                   </label>
 
-                  <input
-                    type="month"
-                    value={periodLabel}
+                  <select
+                    value={selectedMonth}
                     onChange={(e) =>
-                      setPeriodLabel(e.target.value)
+                      setSelectedMonth(
+                        e.target.value
+                      )
                     }
                     style={inputStyle}
-                    required
-                  />
-                </>
+                  >
+
+                    {months.map((month) => (
+                      <option
+                        key={month.value}
+                        value={month.value}
+                      >
+                        {month.label}
+                      </option>
+                    ))}
+
+                  </select>
+
+                </div>
               )}
 
-              {periodType === "yearly" && (
-                <>
+              {/* DAY */}
+
+              {periodType === "daily" && (
+                <div>
+
                   <label style={labelStyle}>
-                    ปี
+                    วันที่
                   </label>
 
-                  <input
-                    type="number"
-                    min="2000"
-                    max="2100"
-                    value={periodLabel}
+                  <select
+                    value={selectedDay}
                     onChange={(e) =>
-                      setPeriodLabel(e.target.value)
+                      setSelectedDay(
+                        e.target.value
+                      )
                     }
-                    placeholder="เช่น 2026"
                     style={inputStyle}
-                    required
-                  />
-                </>
+                  >
+
+                    {days.map((day) => (
+                      <option
+                        key={day}
+                        value={day}
+                      >
+                        {Number(day)}
+                      </option>
+                    ))}
+
+                  </select>
+
+                </div>
               )}
+
             </div>
 
-            {/* หัวข้อพลังงาน */}
+            {/* PREVIEW */}
+
+            <div
+              style={{
+                marginTop: "15px",
+                padding: "12px 15px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: "8px",
+                color: "#1d4ed8",
+                fontWeight: "bold",
+              }}
+            >
+
+              📅 วันที่ข้อมูล:{" "}
+
+              {periodType === "daily" &&
+                `${selectedDay}/${selectedMonth}/${selectedYear}`}
+
+              {periodType === "monthly" &&
+                `${months.find(
+                  (m) =>
+                    m.value === selectedMonth
+                )?.label} ${selectedYear}`}
+
+              {periodType === "yearly" &&
+                selectedYear}
+
+            </div>
+
+            {/* =================================================
+                ENERGY DATA
+            ================================================= */}
+
             <div style={{ marginTop: "30px" }}>
+
               <h2>
                 ⚡ ข้อมูลพลังงาน
               </h2>
@@ -317,8 +541,11 @@ export default function InputPage() {
                   gap: "20px",
                 }}
               >
+
                 {energyTypes.map((item) => (
+
                   <div key={item.id}>
+
                     <label style={labelStyle}>
                       {item.energy_name} ({item.unit})
                     </label>
@@ -326,7 +553,9 @@ export default function InputPage() {
                     <input
                       type="number"
                       step="any"
-                      value={values[item.id] || ""}
+                      value={
+                        values[item.id] || ""
+                      }
                       onChange={(e) =>
                         changeValue(
                           item.id,
@@ -336,13 +565,21 @@ export default function InputPage() {
                       placeholder="กรอกจำนวน"
                       style={inputStyle}
                     />
+
                   </div>
+
                 ))}
+
               </div>
+
             </div>
 
-            {/* หมายเหตุ */}
+            {/* =================================================
+                NOTE
+            ================================================= */}
+
             <div style={{ marginTop: "30px" }}>
+
               <label style={labelStyle}>
                 หมายเหตุ
               </label>
@@ -359,9 +596,13 @@ export default function InputPage() {
                   resize: "vertical",
                 }}
               />
+
             </div>
 
-            {/* ปุ่ม */}
+            {/* =================================================
+                SAVE
+            ================================================= */}
+
             <button
               type="submit"
               disabled={saving}
@@ -381,15 +622,19 @@ export default function InputPage() {
                   : "pointer",
               }}
             >
+
               {saving
                 ? "กำลังบันทึก..."
                 : "💾 บันทึกข้อมูล"}
+
             </button>
 
           </form>
 
-          {/* Message */}
+          {/* MESSAGE */}
+
           {message && (
+
             <div
               style={{
                 marginTop: "20px",
@@ -401,13 +646,20 @@ export default function InputPage() {
             >
               {message}
             </div>
+
           )}
 
         </div>
+
       </div>
+
     </main>
   );
 }
+
+/* =========================================================
+   STYLES
+========================================================= */
 
 const pageStyle = {
   minHeight: "100vh",
@@ -420,20 +672,9 @@ const cardStyle = {
   background: "white",
   padding: "30px",
   borderRadius: "16px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,0.06)",
 };
 
-const labelStyle = {
-  display: "block",
-  fontWeight: "bold",
-  marginBottom: "8px",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "8px",
-  border: "1px solid #ccc",
-  fontSize: "15px",
-  boxSizing: "border-box",
-};
+cons
+```
