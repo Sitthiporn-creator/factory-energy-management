@@ -1,4 +1,4 @@
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"use client";
+"use client";
 
 import { createClient } from "@supabase/supabase-js";
 
