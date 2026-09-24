@@ -20,13 +20,43 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 );
 
-const ENERGY_TYPES = [
-  { key: "electricity", label: "ไฟฟ้า", unit: "kWh" },
-  { key: "solar", label: "Solar", unit: "kWh" },
-  { key: "gas", label: "Gas", unit: "หน่วย" },
-  { key: "fuel", label: "น้ำมัน", unit: "ลิตร" },
-  { key: "steam", label: "Steam", unit: "หน่วย" },
-  { key: "water", label: "น้ำ", unit: "m³" },
+const DEFAULT_ENERGY_TYPES = [
+  {
+    id: "electricity",
+    energy_key: "electricity",
+    energy_name: "ไฟฟ้า",
+    unit: "kWh",
+  },
+  {
+    id: "solar",
+    energy_key: "solar",
+    energy_name: "Solar",
+    unit: "kWh",
+  },
+  {
+    id: "gas",
+    energy_key: "gas",
+    energy_name: "Gas",
+    unit: "Nm³",
+  },
+  {
+    id: "fuel",
+    energy_key: "fuel",
+    energy_name: "น้ำมัน",
+    unit: "ลิตร",
+  },
+  {
+    id: "steam",
+    energy_key: "steam",
+    energy_name: "Steam",
+    unit: "ตัน",
+  },
+  {
+    id: "water",
+    energy_key: "water",
+    energy_name: "น้ำ",
+    unit: "m³",
+  },
 ];
 
 const MONTHS = [
@@ -46,13 +76,25 @@ const MONTHS = [
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
-  const [energyType, setEnergyType] = useState("electricity");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [chartMode, setChartMode] = useState("monthly");
-  const [loading, setLoading] = useState(true);
+  const [energyTypes, setEnergyTypes] = useState(
+    DEFAULT_ENERGY_TYPES
+  );
+
+  const [energyType, setEnergyType] =
+    useState("electricity");
+
+  const [selectedYear, setSelectedYear] =
+    useState("");
+
+  const [chartMode, setChartMode] =
+    useState("monthly");
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
     loadData();
+    loadEnergyTypes();
   }, []);
 
   async function loadData() {
@@ -61,7 +103,9 @@ export default function Dashboard() {
     const { data, error } = await supabase
       .from("energy_data")
       .select("*")
-      .order("record_date", { ascending: true });
+      .order("record_date", {
+        ascending: true,
+      });
 
     if (error) {
       console.error(error);
@@ -73,63 +117,114 @@ export default function Dashboard() {
 
     if (data && data.length > 0) {
       const years = data.map((item) =>
-        new Date(item.record_date).getFullYear()
+        new Date(
+          item.record_date
+        ).getFullYear()
       );
 
-      setSelectedYear(String(Math.max(...years)));
+      setSelectedYear(
+        String(Math.max(...years))
+      );
     }
 
     setLoading(false);
   }
 
+  async function loadEnergyTypes() {
+    const { data, error } = await supabase
+      .from("energy_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("id");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      setEnergyTypes(data);
+
+      setEnergyType(
+        data[0].energy_key
+      );
+    }
+  }
+
   const years = useMemo(() => {
     const yearSet = new Set(
       data.map((item) =>
-        new Date(item.record_date).getFullYear()
+        new Date(
+          item.record_date
+        ).getFullYear()
       )
     );
 
-    return Array.from(yearSet).sort((a, b) => b - a);
+    return Array.from(yearSet).sort(
+      (a, b) => b - a
+    );
   }, [data]);
 
-  const selectedEnergy = ENERGY_TYPES.find(
-    (item) => item.key === energyType
-  );
+  const selectedEnergy =
+    energyTypes.find(
+      (item) =>
+        item.energy_key === energyType
+    );
 
   const monthlyData = useMemo(() => {
-    const result = MONTHS.map((month, index) => ({
-      month,
-      value: 0,
-    }));
+    const result = MONTHS.map(
+      (month) => ({
+        month,
+        value: 0,
+      })
+    );
 
     data.forEach((item) => {
-      const date = new Date(item.record_date);
-      const year = date.getFullYear();
-      const month = date.getMonth();
+      const date = new Date(
+        item.record_date
+      );
 
-      if (String(year) === String(selectedYear)) {
+      const year =
+        date.getFullYear();
+
+      const month =
+        date.getMonth();
+
+      if (
+        String(year) ===
+        String(selectedYear)
+      ) {
         result[month].value +=
-          Number(item[energyType]) || 0;
+          Number(
+            item[energyType]
+          ) || 0;
       }
     });
 
     return result;
-  }, [data, energyType, selectedYear]);
+  }, [
+    data,
+    energyType,
+    selectedYear,
+  ]);
 
   const yearlyData = useMemo(() => {
     const grouped = {};
 
     data.forEach((item) => {
-      const year = new Date(
-        item.record_date
-      ).getFullYear();
+      const year =
+        new Date(
+          item.record_date
+        ).getFullYear();
 
       if (!grouped[year]) {
         grouped[year] = 0;
       }
 
       grouped[year] +=
-        Number(item[energyType]) || 0;
+        Number(
+          item[energyType]
+        ) || 0;
     });
 
     return Object.keys(grouped)
@@ -140,19 +235,14 @@ export default function Dashboard() {
       }));
   }, [data, energyType]);
 
-  const total = data.reduce(
-    (sum, item) =>
-      sum + (Number(item[energyType]) || 0),
-    0
-  );
-
   return (
     <main
       style={{
         minHeight: "100vh",
         background: "#f4f7fb",
         padding: "25px",
-        fontFamily: "Arial, sans-serif",
+        fontFamily:
+          "Arial, sans-serif",
       }}
     >
       <div
@@ -161,7 +251,7 @@ export default function Dashboard() {
           margin: "auto",
         }}
       >
-        {/* Header */}
+        {/* HEADER */}
         <div
           style={{
             background: "white",
@@ -175,15 +265,21 @@ export default function Dashboard() {
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent:
+                "space-between",
               alignItems: "center",
               gap: "15px",
               flexWrap: "wrap",
             }}
           >
             <div>
-              <h1 style={{ margin: 0 }}>
-                ⚡ Factory Energy Management
+              <h1
+                style={{
+                  margin: 0,
+                }}
+              >
+                ⚡ Factory Energy
+                Management
               </h1>
 
               <p
@@ -192,11 +288,12 @@ export default function Dashboard() {
                   marginBottom: 0,
                 }}
               >
-                ระบบจัดการและติดตามการใช้พลังงาน
+                ระบบจัดการและติดตาม
+                การใช้พลังงาน
               </p>
             </div>
 
-            {/* ปุ่มคำสั่ง */}
+            {/* BUTTONS */}
             <div
               style={{
                 display: "flex",
@@ -207,12 +304,17 @@ export default function Dashboard() {
               <a
                 href="/input"
                 style={{
-                  textDecoration: "none",
-                  background: "#2563eb",
+                  textDecoration:
+                    "none",
+                  background:
+                    "#2563eb",
                   color: "white",
-                  padding: "12px 20px",
-                  borderRadius: "8px",
-                  fontWeight: "bold",
+                  padding:
+                    "12px 20px",
+                  borderRadius:
+                    "8px",
+                  fontWeight:
+                    "bold",
                 }}
               >
                 ➕ เพิ่มข้อมูล
@@ -221,21 +323,45 @@ export default function Dashboard() {
               <a
                 href="/edit"
                 style={{
-                  textDecoration: "none",
-                  background: "#f59e0b",
+                  textDecoration:
+                    "none",
+                  background:
+                    "#f59e0b",
                   color: "white",
-                  padding: "12px 20px",
-                  borderRadius: "8px",
-                  fontWeight: "bold",
+                  padding:
+                    "12px 20px",
+                  borderRadius:
+                    "8px",
+                  fontWeight:
+                    "bold",
                 }}
               >
                 ✏️ แก้ไขข้อมูล
+              </a>
+
+              <a
+                href="/settings"
+                style={{
+                  textDecoration:
+                    "none",
+                  background:
+                    "#64748b",
+                  color: "white",
+                  padding:
+                    "12px 20px",
+                  borderRadius:
+                    "8px",
+                  fontWeight:
+                    "bold",
+                }}
+              >
+                ⚙️ ตั้งค่าพลังงาน
               </a>
             </div>
           </div>
         </div>
 
-        {/* Summary */}
+        {/* SUMMARY */}
         <div
           style={{
             display: "grid",
@@ -245,56 +371,80 @@ export default function Dashboard() {
             marginBottom: "20px",
           }}
         >
-          {ENERGY_TYPES.map((item) => {
-            const value = data.reduce(
-              (sum, row) =>
-                sum + (Number(row[item.key]) || 0),
-              0
-            );
+          {energyTypes.map(
+            (item) => {
+              const total =
+                data.reduce(
+                  (
+                    sum,
+                    row
+                  ) =>
+                    sum +
+                    (Number(
+                      row[
+                        item.energy_key
+                      ]
+                    ) || 0),
+                  0
+                );
 
-            return (
-              <div
-                key={item.key}
-                style={{
-                  background: "white",
-                  padding: "20px",
-                  borderRadius: "14px",
-                  boxShadow:
-                    "0 2px 10px rgba(0,0,0,0.05)",
-                }}
-              >
+              return (
                 <div
+                  key={
+                    item.energy_key
+                  }
                   style={{
-                    color: "#666",
-                    marginBottom: "8px",
+                    background:
+                      "white",
+                    padding:
+                      "20px",
+                    borderRadius:
+                      "14px",
+                    boxShadow:
+                      "0 2px 10px rgba(0,0,0,0.05)",
                   }}
                 >
-                  {item.label}
-                </div>
+                  <div
+                    style={{
+                      color:
+                        "#666",
+                      marginBottom:
+                        "8px",
+                    }}
+                  >
+                    {
+                      item.energy_name
+                    }
+                  </div>
 
-                <div
-                  style={{
-                    fontSize: "25px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {value.toLocaleString()}
-                </div>
+                  <div
+                    style={{
+                      fontSize:
+                        "25px",
+                      fontWeight:
+                        "bold",
+                    }}
+                  >
+                    {total.toLocaleString()}
+                  </div>
 
-                <div
-                  style={{
-                    color: "#888",
-                    marginTop: "5px",
-                  }}
-                >
-                  {item.unit}
+                  <div
+                    style={{
+                      color:
+                        "#888",
+                      marginTop:
+                        "5px",
+                    }}
+                  >
+                    {item.unit}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            }
+          )}
         </div>
 
-        {/* Controls */}
+        {/* CONTROLS */}
         <div
           style={{
             background: "white",
@@ -308,15 +458,19 @@ export default function Dashboard() {
               display: "flex",
               gap: "15px",
               flexWrap: "wrap",
-              alignItems: "center",
+              alignItems:
+                "center",
             }}
           >
             <div>
               <label
                 style={{
-                  display: "block",
-                  fontWeight: "bold",
-                  marginBottom: "6px",
+                  display:
+                    "block",
+                  fontWeight:
+                    "bold",
+                  marginBottom:
+                    "6px",
                 }}
               >
                 ประเภทพลังงาน
@@ -325,78 +479,113 @@ export default function Dashboard() {
               <select
                 value={energyType}
                 onChange={(e) =>
-                  setEnergyType(e.target.value)
+                  setEnergyType(
+                    e.target.value
+                  )
                 }
                 style={{
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
+                  padding:
+                    "10px",
+                  borderRadius:
+                    "8px",
+                  border:
+                    "1px solid #ccc",
                 }}
               >
-                {ENERGY_TYPES.map((item) => (
-                  <option
-                    key={item.key}
-                    value={item.key}
-                  >
-                    {item.label}
-                  </option>
-                ))}
+                {energyTypes.map(
+                  (item) => (
+                    <option
+                      key={
+                        item.energy_key
+                      }
+                      value={
+                        item.energy_key
+                      }
+                    >
+                      {
+                        item.energy_name
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div>
               <label
                 style={{
-                  display: "block",
-                  fontWeight: "bold",
-                  marginBottom: "6px",
+                  display:
+                    "block",
+                  fontWeight:
+                    "bold",
+                  marginBottom:
+                    "6px",
                 }}
               >
                 ปี
               </label>
 
               <select
-                value={selectedYear}
+                value={
+                  selectedYear
+                }
                 onChange={(e) =>
-                  setSelectedYear(e.target.value)
+                  setSelectedYear(
+                    e.target.value
+                  )
                 }
                 style={{
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
+                  padding:
+                    "10px",
+                  borderRadius:
+                    "8px",
+                  border:
+                    "1px solid #ccc",
                 }}
               >
-                {years.map((year) => (
-                  <option
-                    key={year}
-                    value={year}
-                  >
-                    {year}
-                  </option>
-                ))}
+                {years.map(
+                  (year) => (
+                    <option
+                      key={year}
+                      value={year}
+                    >
+                      {year}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
             <div>
               <label
                 style={{
-                  display: "block",
-                  fontWeight: "bold",
-                  marginBottom: "6px",
+                  display:
+                    "block",
+                  fontWeight:
+                    "bold",
+                  marginBottom:
+                    "6px",
                 }}
               >
                 รูปแบบ
               </label>
 
               <select
-                value={chartMode}
+                value={
+                  chartMode
+                }
                 onChange={(e) =>
-                  setChartMode(e.target.value)
+                  setChartMode(
+                    e.target.value
+                  )
                 }
                 style={{
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
+                  padding:
+                    "10px",
+                  borderRadius:
+                    "8px",
+                  border:
+                    "1px solid #ccc",
                 }}
               >
                 <option value="monthly">
@@ -411,7 +600,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Chart */}
+        {/* CHART */}
         <div
           style={{
             background: "white",
@@ -421,11 +610,25 @@ export default function Dashboard() {
           }}
         >
           <h2>
-            {selectedEnergy?.label}{" "}
-            {chartMode === "monthly"
+            {
+              selectedEnergy?.energy_name
+            }{" "}
+            {chartMode ===
+            "monthly"
               ? "รายเดือน"
               : "รายปี"}
           </h2>
+
+          <p
+            style={{
+              color: "#666",
+            }}
+          >
+            หน่วย:{" "}
+            {
+              selectedEnergy?.unit
+            }
+          </p>
 
           <div
             style={{
@@ -434,11 +637,20 @@ export default function Dashboard() {
             }}
           >
             <ResponsiveContainer>
-              {chartMode === "monthly" ? (
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
+              {chartMode ===
+              "monthly" ? (
+                <LineChart
+                  data={
+                    monthlyData
+                  }
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                  />
 
-                  <XAxis dataKey="month" />
+                  <XAxis
+                    dataKey="month"
+                  />
 
                   <YAxis />
 
@@ -449,16 +661,28 @@ export default function Dashboard() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    name={selectedEnergy?.label}
+                    name={
+                      selectedEnergy?.energy_name
+                    }
                     stroke="#2563eb"
-                    strokeWidth={3}
+                    strokeWidth={
+                      3
+                    }
                   />
                 </LineChart>
               ) : (
-                <BarChart data={yearlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                <BarChart
+                  data={
+                    yearlyData
+                  }
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                  />
 
-                  <XAxis dataKey="year" />
+                  <XAxis
+                    dataKey="year"
+                  />
 
                   <YAxis />
 
@@ -468,7 +692,9 @@ export default function Dashboard() {
 
                   <Bar
                     dataKey="value"
-                    name={selectedEnergy?.label}
+                    name={
+                      selectedEnergy?.energy_name
+                    }
                     fill="#2563eb"
                   />
                 </BarChart>
@@ -477,7 +703,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Data table */}
+        {/* DATA TABLE */}
         <div
           style={{
             background: "white",
@@ -485,105 +711,134 @@ export default function Dashboard() {
             borderRadius: "14px",
           }}
         >
-          <h2>📋 ข้อมูลพลังงาน</h2>
+          <h2>
+            📋 ข้อมูลพลังงาน
+          </h2>
 
           {loading ? (
-            <p>กำลังโหลดข้อมูล...</p>
-          ) : data.length === 0 ? (
-            <p>ยังไม่มีข้อมูล</p>
+            <p>
+              กำลังโหลดข้อมูล...
+            </p>
+          ) : data.length ===
+            0 ? (
+            <p>
+              ยังไม่มีข้อมูล
+            </p>
           ) : (
             <div
               style={{
-                overflowX: "auto",
+                overflowX:
+                  "auto",
               }}
             >
               <table
                 style={{
                   width: "100%",
-                  borderCollapse: "collapse",
+                  borderCollapse:
+                    "collapse",
                 }}
               >
                 <thead>
                   <tr
                     style={{
-                      background: "#f1f5f9",
+                      background:
+                        "#f1f5f9",
                     }}
                   >
-                    <th style={thStyle}>
+                    <th
+                      style={
+                        thStyle
+                      }
+                    >
                       วันที่
                     </th>
-                    <th style={thStyle}>
-                      ไฟฟ้า
-                    </th>
-                    <th style={thStyle}>
-                      Solar
-                    </th>
-                    <th style={thStyle}>
-                      Gas
-                    </th>
-                    <th style={thStyle}>
-                      น้ำมัน
-                    </th>
-                    <th style={thStyle}>
-                      Steam
-                    </th>
-                    <th style={thStyle}>
-                      น้ำ
-                    </th>
-                    <th style={thStyle}>
+
+                    {energyTypes.map(
+                      (item) => (
+                        <th
+                          key={
+                            item.energy_key
+                          }
+                          style={
+                            thStyle
+                          }
+                        >
+                          {
+                            item.energy_name
+                          }
+                          <br />
+                          <small>
+                            (
+                            {
+                              item.unit
+                            }
+                            )
+                          </small>
+                        </th>
+                      )
+                    )}
+
+                    <th
+                      style={
+                        thStyle
+                      }
+                    >
                       หมายเหตุ
                     </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {data.map((item) => (
-                    <tr key={item.id}>
-                      <td style={tdStyle}>
-                        {item.record_date}
-                      </td>
+                  {data.map(
+                    (item) => (
+                      <tr
+                        key={
+                          item.id
+                        }
+                      >
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+                          {
+                            item.record_date
+                          }
+                        </td>
 
-                      <td style={tdStyle}>
-                        {Number(
-                          item.electricity || 0
-                        ).toLocaleString()}
-                      </td>
+                        {energyTypes.map(
+                          (
+                            energy
+                          ) => (
+                            <td
+                              key={
+                                energy.energy_key
+                              }
+                              style={
+                                tdStyle
+                              }
+                            >
+                              {Number(
+                                item[
+                                  energy.energy_key
+                                ] ||
+                                  0
+                              ).toLocaleString()}
+                            </td>
+                          )
+                        )}
 
-                      <td style={tdStyle}>
-                        {Number(
-                          item.solar || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td style={tdStyle}>
-                        {Number(
-                          item.gas || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td style={tdStyle}>
-                        {Number(
-                          item.fuel || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td style={tdStyle}>
-                        {Number(
-                          item.steam || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td style={tdStyle}>
-                        {Number(
-                          item.water || 0
-                        ).toLocaleString()}
-                      </td>
-
-                      <td style={tdStyle}>
-                        {item.note || "-"}
-                      </td>
-                    </tr>
-                  ))}
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
+                          {item.note ||
+                            "-"}
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </div>
@@ -596,11 +851,13 @@ export default function Dashboard() {
 
 const thStyle = {
   padding: "12px",
-  borderBottom: "1px solid #ddd",
+  borderBottom:
+    "1px solid #ddd",
   textAlign: "left",
 };
 
 const tdStyle = {
   padding: "12px",
-  borderBottom: "1px solid #eee",
+  borderBottom:
+    "1px solid #eee",
 };
