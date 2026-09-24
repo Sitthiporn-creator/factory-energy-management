@@ -32,7 +32,6 @@ export default function InputPage() {
 const [energyTypes, setEnergyTypes] = useState([]);
 const [periodType, setPeriodType] = useState("monthly");
 
-// เดือน / ปี
 const [selectedMonth, setSelectedMonth] = useState("");
 const [selectedYear, setSelectedYear] = useState("");
 
@@ -150,7 +149,6 @@ if (!finalRecordDate || !finalPeriodLabel) {
 setSaving(true);
 setMessage("กำลังบันทึก...");
 
-// 1. สร้างรายการหลัก
 const { data: energyData, error: energyError } =
   await supabase
     .from("energy_data")
@@ -175,14 +173,12 @@ if (energyError) {
   return;
 }
 
-// 2. เตรียมค่าพลังงาน
 const energyValues = energyTypes.map((item) => ({
   energy_data_id: energyData.id,
   energy_type_id: item.id,
   value: Number(values[item.id]) || 0,
 }));
 
-// 3. บันทึกค่าพลังงาน
 const { error: valuesError } = await supabase
   .from("energy_values")
   .insert(energyValues);
@@ -199,7 +195,6 @@ if (valuesError) {
 
 setMessage("✅ บันทึกข้อมูลสำเร็จ");
 
-// ล้างข้อมูล
 setNote("");
 
 const emptyValues = {};
@@ -210,9 +205,6 @@ energyTypes.forEach((item) => {
 
 setValues(emptyValues);
 
-// หลังบันทึกรายเดือน
-// เลื่อนไปเดือนถัดไปอัตโนมัติ
-// โดยปีคงเดิม
 if (periodType === "monthly") {
   const currentMonth = Number(selectedMonth);
 
@@ -227,7 +219,6 @@ if (periodType === "monthly") {
   );
 }
 
-// รายปีไม่เปลี่ยนปี
 if (periodType === "yearly") {
   setSelectedYear(selectedYear);
 }
@@ -237,12 +228,10 @@ setSaving(false);
 
 }
 
-// เปลี่ยนประเภทข้อมูล
 function changePeriodType(type) {
 setPeriodType(type);
 
 ```
-// ล้างเฉพาะตัวเลือกช่วงเวลา
 setSelectedMonth("");
 setSelectedYear("");
 ```
@@ -258,7 +247,6 @@ return ( <main style={pageStyle}>
 <div style={{ maxWidth: "1000px", margin: "auto" }}> <div style={cardStyle}>
 
 ```
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -294,7 +282,6 @@ return ( <main style={pageStyle}>
 
       <form onSubmit={saveData}>
 
-        {/* ประเภทช่วงเวลา */}
         <div style={{ marginTop: "30px" }}>
           <label style={labelStyle}>
             ประเภทข้อมูล
@@ -317,10 +304,8 @@ return ( <main style={pageStyle}>
           </select>
         </div>
 
-        {/* ช่วงเวลา */}
         <div style={{ marginTop: "20px" }}>
 
-          {/* ================= รายเดือน ================= */}
           {periodType === "monthly" && (
             <div
               style={{
@@ -330,7 +315,7 @@ return ( <main style={pageStyle}>
                 gap: "15px",
               }}
             >
-              {/* เดือน */}
+
               <div>
                 <label style={labelStyle}>
                   เดือน
@@ -359,7 +344,6 @@ return ( <main style={pageStyle}>
                 </select>
               </div>
 
-              {/* ปี */}
               <div>
                 <label style={labelStyle}>
                   ปี
@@ -387,10 +371,10 @@ return ( <main style={pageStyle}>
                   ))}
                 </select>
               </div>
+
             </div>
           )}
 
-          {/* ================= รายปี ================= */}
           {periodType === "yearly" && (
             <div>
               <label style={labelStyle}>
@@ -419,140 +403,4 @@ return ( <main style={pageStyle}>
                 ))}
               </select>
             </div>
-          )}
-        </div>
-
-        {/* หัวข้อพลังงาน */}
-        <div style={{ marginTop: "30px" }}>
-          <h2>
-            ⚡ ข้อมูลพลังงาน
-          </h2>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "20px",
-            }}
-          >
-            {energyTypes.map((item) => (
-              <div key={item.id}>
-                <label style={labelStyle}>
-                  {item.energy_name} ({item.unit})
-                </label>
-
-                <input
-                  type="number"
-                  step="any"
-                  value={values[item.id] || ""}
-                  onChange={(e) =>
-                    changeValue(
-                      item.id,
-                      e.target.value
-                    )
-                  }
-                  placeholder="กรอกจำนวน"
-                  style={inputStyle}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* หมายเหตุ */}
-        <div style={{ marginTop: "30px" }}>
-          <label style={labelStyle}>
-            หมายเหตุ
-          </label>
-
-          <textarea
-            value={note}
-            onChange={(e) =>
-              setNote(e.target.value)
-            }
-            rows="4"
-            placeholder="รายละเอียดเพิ่มเติม"
-            style={{
-              ...inputStyle,
-              resize: "vertical",
-            }}
-          />
-        </div>
-
-        {/* ปุ่ม */}
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            marginTop: "30px",
-            padding: "13px 30px",
-            border: "none",
-            borderRadius: "8px",
-            background: saving
-              ? "#94a3b8"
-              : "#2563eb",
-            color: "white",
-            fontSize: "16px",
-            fontWeight: "bold",
-            cursor: saving
-              ? "not-allowed"
-              : "pointer",
-          }}
-        >
-          {saving
-            ? "กำลังบันทึก..."
-            : "💾 บันทึกข้อมูล"}
-        </button>
-
-      </form>
-
-      {/* Message */}
-      {message && (
-        <div
-          style={{
-            marginTop: "20px",
-            padding: "12px",
-            borderRadius: "8px",
-            background: "#f1f5f9",
-            fontWeight: "bold",
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-    </div>
-  </div>
-</main>
-);
-}
-
-const pageStyle = {
-minHeight: "100vh",
-background: "#f4f7fb",
-padding: "30px",
-fontFamily: "Arial, sans-serif",
-};
-
-const cardStyle = {
-background: "white",
-padding: "30px",
-borderRadius: "16px",
-boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-};
-
-const labelStyle = {
-display: "block",
-fontWeight: "bold",
-marginBottom: "8px",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "8px",
-  border: "1px solid #ccc",
-  fontSize: "15px",
-  boxSizing: "border-box",
-};
+```
