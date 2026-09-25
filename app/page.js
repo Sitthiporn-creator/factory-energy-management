@@ -367,8 +367,8 @@ export default function Dashboard() {
           padding: 28px;
         }
         .container {
-          max-width: 1450px;
-          margin: auto;
+          max-width: 1600px;
+          margin: 0;
         }
         .header {
           position: relative;
